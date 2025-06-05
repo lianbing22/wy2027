@@ -1,280 +1,226 @@
-/**
- * 服务层统一导出
- * 提供游戏所有核心服务的统一入口
- */
-
-// 核心游戏引擎服务
-export { GameEngineService } from './GameEngineService';
-export type {
-  GameEngine,
-  EventBus,
-  Scheduler,
-  TenantEngine,
-  MarketEngine,
-  ExplorationEngine
-} from './GameEngineService';
+// 核心游戏引擎
+export { gameEngine } from './GameEngineService';
+export type { GameEngineService } from './GameEngineService';
+export type { SubEngine, EventBus, Scheduler } from './GameEngineService';
 
 // 租户管理服务
 export { TenantService } from './TenantService';
-export type {
-  TenantInteractionEngine,
-  TenantBehaviorType,
-  InteractionType,
-  SatisfactionFactors,
-  BehaviorPrediction,
-  CommunityHealth,
-  TenantMatchSuggestion
-} from './TenantService';
 
-// 市场服务
+// 市场分析服务
 export { MarketService } from './MarketService';
-export type {
-  MarketTrend,
-  MarketEvent,
-  MarketStatistics,
-  PriceHistory,
-  MarketHealth
-} from './MarketService';
 
 // 探险系统服务
 export { ExplorationService } from './ExplorationService';
-export type {
-  DifficultyLevel,
-  ExplorationType,
-  ExplorationStatus
-} from './ExplorationService';
+export { DifficultyLevel, ExplorationType, ExplorationStatus } from './ExplorationService';
 
 // 成就系统服务
 export { AchievementService } from './AchievementService';
-export type {
-  AchievementType,
-  AchievementStatus,
-  ConditionType
-} from './AchievementService';
+export { AchievementType, AchievementStatus, ConditionType } from './AchievementService';
 
-// 通知系统服务
+// 通知服务
 export { NotificationService } from './NotificationService';
-export type {
+export {
   NotificationType,
   NotificationPriority,
   NotificationStatus,
-  NotificationChannel,
-  Notification
+  NotificationChannel
 } from './NotificationService';
+export type { Notification } from './NotificationService';
 
 // 资源管理服务
 export { AssetService } from './AssetService';
+export {
+  AssetType,
+  AssetCategory
+} from './AssetService';
 export type {
   AssetInfo,
-  AssetType,
-  AssetCategory,
-  LoadingState,
-  CacheConfig
+  AssetLoadingState,
+  ThemeAssets
 } from './AssetService';
 
-/**
- * 服务管理器
- * 统一管理所有游戏服务的生命周期
- */
+// 服务管理器
 export class ServiceManager {
   private static instance: ServiceManager;
-  private services: Map<string, any> = new Map();
+  private gameEngine: any;
+  private tenantService: TenantService;
+  private marketService: MarketService;
+  private explorationService: ExplorationService;
+  private achievementService: AchievementService;
+  private notificationService: NotificationService;
+  private assetService: AssetService;
   private initialized = false;
-  
-  private constructor() {}
-  
+
+  private constructor() {
+    // 私有构造函数，确保单例
+  }
+
   static getInstance(): ServiceManager {
     if (!ServiceManager.instance) {
       ServiceManager.instance = new ServiceManager();
     }
     return ServiceManager.instance;
   }
-  
-  /**
-   * 初始化所有服务
-   */
+
   async initialize(): Promise<void> {
-    if (this.initialized) return;
-    
+    if (this.initialized) {
+      return;
+    }
+
     try {
-      // 初始化资源服务（优先级最高）
-      const assetService = new AssetService();
-      await assetService.preloadCriticalAssets();
-      this.services.set('asset', assetService);
-      
-      // 初始化通知服务
-      const notificationService = new NotificationService();
-      this.services.set('notification', notificationService);
-      
-      // 初始化成就服务
-      const achievementService = new AchievementService();
-      this.services.set('achievement', achievementService);
-      
-      // 初始化探险服务
-      const explorationService = new ExplorationService();
-      this.services.set('exploration', explorationService);
-      
-      // 初始化市场服务
-      const marketService = new MarketService();
-      this.services.set('market', marketService);
-      
-      // 初始化租户服务
-      const tenantService = new TenantService();
-      this.services.set('tenant', tenantService);
-      
-      // 初始化游戏引擎（最后初始化，依赖其他服务）
-      const gameEngineService = new GameEngineService({
-        tenantService,
-        marketService,
-        explorationService,
-        achievementService,
-        notificationService
-      });
-      this.services.set('gameEngine', gameEngineService);
-      
+      // 初始化核心服务
+      const { gameEngine } = await import('./GameEngineService');
+      this.gameEngine = gameEngine;
+
+      // 初始化其他服务
+      this.tenantService = new TenantService();
+      this.marketService = new MarketService();
+      this.explorationService = new ExplorationService();
+      this.achievementService = new AchievementService();
+      this.notificationService = new NotificationService();
+      this.assetService = new AssetService();
+
+      // 启动游戏引擎
+      await this.gameEngine.start();
+
       this.initialized = true;
-      console.log('🎮 所有游戏服务初始化完成');
-      
+      console.log('ServiceManager initialized successfully');
     } catch (error) {
-      console.error('❌ 服务初始化失败:', error);
+      console.error('Failed to initialize ServiceManager:', error);
       throw error;
     }
   }
-  
-  /**
-   * 获取服务实例
-   */
-  getService<T>(serviceName: string): T {
-    const service = this.services.get(serviceName);
-    if (!service) {
-      throw new Error(`服务 ${serviceName} 未找到或未初始化`);
+
+  getGameEngine() {
+    if (!this.initialized) {
+      throw new Error('ServiceManager not initialized. Call initialize() first.');
     }
-    return service as T;
+    return this.gameEngine;
   }
-  
-  /**
-   * 获取游戏引擎服务
-   */
-  getGameEngine(): GameEngineService {
-    return this.getService<GameEngineService>('gameEngine');
-  }
-  
-  /**
-   * 获取租户服务
-   */
+
   getTenantService(): TenantService {
-    return this.getService<TenantService>('tenant');
+    if (!this.initialized) {
+      throw new Error('ServiceManager not initialized. Call initialize() first.');
+    }
+    return this.tenantService;
   }
-  
-  /**
-   * 获取市场服务
-   */
+
   getMarketService(): MarketService {
-    return this.getService<MarketService>('market');
+    if (!this.initialized) {
+      throw new Error('ServiceManager not initialized. Call initialize() first.');
+    }
+    return this.marketService;
   }
-  
-  /**
-   * 获取探险服务
-   */
+
   getExplorationService(): ExplorationService {
-    return this.getService<ExplorationService>('exploration');
+    if (!this.initialized) {
+      throw new Error('ServiceManager not initialized. Call initialize() first.');
+    }
+    return this.explorationService;
   }
-  
-  /**
-   * 获取成就服务
-   */
+
   getAchievementService(): AchievementService {
-    return this.getService<AchievementService>('achievement');
+    if (!this.initialized) {
+      throw new Error('ServiceManager not initialized. Call initialize() first.');
+    }
+    return this.achievementService;
   }
-  
-  /**
-   * 获取通知服务
-   */
+
   getNotificationService(): NotificationService {
-    return this.getService<NotificationService>('notification');
+    if (!this.initialized) {
+      throw new Error('ServiceManager not initialized. Call initialize() first.');
+    }
+    return this.notificationService;
   }
-  
-  /**
-   * 获取资源服务
-   */
+
   getAssetService(): AssetService {
-    return this.getService<AssetService>('asset');
+    if (!this.initialized) {
+      throw new Error('ServiceManager not initialized. Call initialize() first.');
+    }
+    return this.assetService;
   }
-  
-  /**
-   * 检查服务是否已初始化
-   */
+
+  async shutdown(): Promise<void> {
+    if (!this.initialized) {
+      return;
+    }
+
+    try {
+      // 停止游戏引擎
+      if (this.gameEngine && typeof this.gameEngine.stop === 'function') {
+        await this.gameEngine.stop();
+      }
+
+      // 清理其他服务
+      if (this.notificationService && typeof this.notificationService.shutdown === 'function') {
+        await this.notificationService.shutdown();
+      }
+
+      this.initialized = false;
+      console.log('ServiceManager shutdown successfully');
+    } catch (error) {
+      console.error('Error during ServiceManager shutdown:', error);
+      throw error;
+    }
+  }
+
   isInitialized(): boolean {
     return this.initialized;
   }
-  
-  /**
-   * 获取所有服务状态
-   */
-  getServicesStatus(): Record<string, boolean> {
-    const status: Record<string, boolean> = {};
-    
-    const serviceNames = [
-      'asset',
-      'notification', 
-      'achievement',
-      'exploration',
-      'market',
-      'tenant',
-      'gameEngine'
-    ];
-    
-    serviceNames.forEach(name => {
-      status[name] = this.services.has(name);
-    });
-    
-    return status;
-  }
-  
-  /**
-   * 销毁所有服务
-   */
-  async destroy(): Promise<void> {
-    // 按相反顺序销毁服务
-    const serviceNames = [
-      'gameEngine',
-      'tenant',
-      'market', 
-      'exploration',
-      'achievement',
-      'notification',
-      'asset'
-    ];
-    
-    for (const serviceName of serviceNames) {
-      const service = this.services.get(serviceName);
-      if (service && typeof service.destroy === 'function') {
-        try {
-          await service.destroy();
-        } catch (error) {
-          console.error(`销毁服务 ${serviceName} 时出错:`, error);
-        }
-      }
-      this.services.delete(serviceName);
+
+  // 健康检查
+  async healthCheck(): Promise<{ [key: string]: boolean }> {
+    const health: { [key: string]: boolean } = {};
+
+    try {
+      health.serviceManager = this.initialized;
+      health.gameEngine = this.gameEngine ? true : false;
+      health.tenantService = this.tenantService ? true : false;
+      health.marketService = this.marketService ? true : false;
+      health.explorationService = this.explorationService ? true : false;
+      health.achievementService = this.achievementService ? true : false;
+      health.notificationService = this.notificationService ? true : false;
+      health.assetService = this.assetService ? true : false;
+
+      return health;
+    } catch (error) {
+      console.error('Health check failed:', error);
+      return { error: false };
     }
-    
-    this.initialized = false;
-    console.log('🔄 所有游戏服务已销毁');
   }
-  
-  /**
-   * 重启所有服务
-   */
-  async restart(): Promise<void> {
-    await this.destroy();
+
+  // 获取服务统计信息
+  getServiceStats(): { [key: string]: any } {
+    if (!this.initialized) {
+      return { initialized: false };
+    }
+
+    return {
+      initialized: true,
+      services: {
+        gameEngine: !!this.gameEngine,
+        tenantService: !!this.tenantService,
+        marketService: !!this.marketService,
+        explorationService: !!this.explorationService,
+        achievementService: !!this.achievementService,
+        notificationService: !!this.notificationService,
+        assetService: !!this.assetService
+      },
+      uptime: Date.now() // 简单的运行时间标记
+    };
+  }
+
+  // 重新加载服务
+  async reload(): Promise<void> {
+    await this.shutdown();
     await this.initialize();
   }
 }
 
-// 导出服务管理器单例
+// 导出单例实例
 export const serviceManager = ServiceManager.getInstance();
 
-// 便捷的服务获取函数
+// 便捷访问函数
 export const getGameEngine = () => serviceManager.getGameEngine();
 export const getTenantService = () => serviceManager.getTenantService();
 export const getMarketService = () => serviceManager.getMarketService();
@@ -283,22 +229,52 @@ export const getAchievementService = () => serviceManager.getAchievementService(
 export const getNotificationService = () => serviceManager.getNotificationService();
 export const getAssetService = () => serviceManager.getAssetService();
 
-/**
- * React Hook: 使用服务管理器
- */
+// React Hook for using services
+import { useEffect, useState } from 'react';
+
 export const useServices = () => {
+  const [initialized, setInitialized] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    const initServices = async () => {
+      try {
+        setLoading(true);
+        await serviceManager.initialize();
+        setInitialized(true);
+        setError(null);
+      } catch (err) {
+        setError(err as Error);
+        setInitialized(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (!serviceManager.isInitialized()) {
+      initServices();
+    } else {
+      setInitialized(true);
+      setLoading(false);
+    }
+  }, []);
+
   return {
-    serviceManager,
-    gameEngine: getGameEngine,
-    tenantService: getTenantService,
-    marketService: getMarketService,
-    explorationService: getExplorationService,
-    achievementService: getAchievementService,
-    notificationService: getNotificationService,
-    assetService: getAssetService,
-    isInitialized: serviceManager.isInitialized(),
-    servicesStatus: serviceManager.getServicesStatus()
+    initialized,
+    loading,
+    error,
+    services: initialized ? {
+      gameEngine: serviceManager.getGameEngine(),
+      tenantService: serviceManager.getTenantService(),
+      marketService: serviceManager.getMarketService(),
+      explorationService: serviceManager.getExplorationService(),
+      achievementService: serviceManager.getAchievementService(),
+      notificationService: serviceManager.getNotificationService(),
+      assetService: serviceManager.getAssetService()
+    } : null
   };
 };
 
+// 默认导出
 export default serviceManager;

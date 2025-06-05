@@ -1,4 +1,4 @@
-import { Tenant, TenantType, TenantStatus, TenantPersonality, TenantPreferences, TenantInteractionRecord, TenantRelationshipNetwork, TenantLifestyle, TenantEvent } from '../types/tenant-system';
+import { Tenant, TenantType, TenantStatus, PersonalityTrait, TenantPreferences, TenantInteraction, TenantRelationship, LifestylePattern, TenantEvent } from '../types/tenant-system';
 import { Property, PropertyType } from '../types/property';
 import { GameState } from '../types/game-state';
 
@@ -64,13 +64,13 @@ class TenantInteractionEngine {
     
     neighbors.forEach(neighbor => {
       const personalityCompatibility = this.calculatePersonalityCompatibility(
-        tenant.personality,
-        neighbor.personality
+        tenant.personalityTraits,
+        neighbor.personalityTraits
       );
       
       const lifestyleCompatibility = this.calculateLifestyleCompatibility(
-        tenant.lifestyle,
-        neighbor.lifestyle
+        tenant.lifestylePattern,
+        neighbor.lifestylePattern
       );
       
       const relationshipBonus = this.getRelationshipBonus(tenant, neighbor);
@@ -134,7 +134,7 @@ class TenantInteractionEngine {
    */
   predictTenantRetention(tenant: Tenant, environment: PropertyEnvironment): number {
     const satisfactionFactors = this.analyzeSatisfactionFactors(tenant, environment);
-    const personalityFactors = this.getPersonalityRetentionFactors(tenant.personality);
+    const personalityFactors = this.getPersonalityRetentionFactors(tenant.personalityTraits);
     const financialStability = this.assessFinancialStability(tenant);
     const marketAlternatives = this.assessMarketAlternatives(tenant, environment);
     
@@ -159,27 +159,24 @@ class TenantInteractionEngine {
   }
   
   // 私有辅助方法
-  private calculatePersonalityCompatibility(p1: TenantPersonality, p2: TenantPersonality): number {
-    const factors = [
-      Math.abs(p1.sociability - p2.sociability),
-      Math.abs(p1.cleanliness - p2.cleanliness),
-      Math.abs(p1.noiseLevel - p2.noiseLevel),
-      Math.abs(p1.petFriendly - p2.petFriendly)
-    ];
+  private calculatePersonalityCompatibility(p1: PersonalityTrait[], p2: PersonalityTrait[]): number {
+    // 计算性格特征的兼容性
+    // 这里简化为共同特征的比例
+    const commonTraits = p1.filter(trait => p2.includes(trait)).length;
+    const totalTraits = new Set([...p1, ...p2]).size;
     
-    const avgDifference = factors.reduce((sum, diff) => sum + diff, 0) / factors.length;
-    return Math.max(0, 1 - avgDifference); // 差异越小，兼容性越高
+    return commonTraits / totalTraits;
   }
   
-  private calculateLifestyleCompatibility(l1: TenantLifestyle, l2: TenantLifestyle): number {
-    const scheduleCompatibility = this.calculateScheduleCompatibility(l1.dailySchedule, l2.dailySchedule);
-    const activityCompatibility = this.calculateActivityCompatibility(l1.hobbies, l2.hobbies);
+  private calculateLifestyleCompatibility(l1: LifestylePattern, l2: LifestylePattern): number {
+    const scheduleCompatibility = this.calculateScheduleCompatibility(l1.workSchedule, l2.workSchedule);
+    const activityCompatibility = this.calculateActivityCompatibility(l1.socialActivity, l2.socialActivity);
     
     return (scheduleCompatibility + activityCompatibility) / 2;
   }
   
   private getRelationshipBonus(tenant1: Tenant, tenant2: Tenant): number {
-    const relationship = tenant1.relationshipNetwork.relationships.find(
+    const relationship = tenant1.relationships.find(
       r => r.tenantId === tenant2.id
     );
     
@@ -187,99 +184,35 @@ class TenantInteractionEngine {
     
     switch (relationship.relationshipType) {
       case 'friend': return 0.2;
-      case 'acquaintance': return 0.1;
       case 'neutral': return 0;
-      case 'dislike': return -0.1;
       case 'conflict': return -0.3;
       default: return 0;
     }
   }
   
   private calculateTenantNoiseLevel(tenant: Tenant): number {
-    const baseNoise = tenant.personality.noiseLevel;
-    const lifestyleNoise = tenant.lifestyle.hobbies.includes('music') ? 0.2 : 0;
-    const petNoise = tenant.hasPets ? 0.15 : 0;
+    // 基于租户特征计算噪音水平
+    const hasNoisyTrait = tenant.personalityTraits.includes(PersonalityTrait.PARTY_LOVER);
+    const hasMusicHobby = tenant.lifestylePattern.socialActivity > 7;
     
-    return Math.min(1, baseNoise + lifestyleNoise + petNoise);
-  }
-  
-  private calculateAverageNoiseLevel(tenants: Tenant[]): number {
-    return tenants.reduce((sum, tenant) => sum + this.calculateTenantNoiseLevel(tenant), 0) / tenants.length * 100;
+    return (hasNoisyTrait ? 0.3 : 0) + (hasMusicHobby ? 0.2 : 0) + tenant.lifestylePattern.noiseLevel / 10;
   }
   
   private calculateCleanliness(tenants: Tenant[]): number {
-    return tenants.reduce((sum, tenant) => sum + tenant.personality.cleanliness, 0) / tenants.length * 100;
+    // 计算平均清洁度
+    return tenants.reduce((sum, tenant) => sum + tenant.lifestylePattern.cleanlinessLevel, 0) / tenants.length * 10;
   }
   
-  private calculateSafetyLevel(tenants: Tenant[]): number {
-    // 基于租户类型和行为历史计算安全水平
-    const safetyScores = tenants.map(tenant => {
-      let score = 0.8; // 基础安全分数
-      
-      // 根据租户类型调整
-      switch (tenant.type) {
-        case TenantType.FAMILY:
-          score += 0.1;
-          break;
-        case TenantType.ELDERLY:
-          score += 0.05;
-          break;
-        case TenantType.STUDENT:
-          score -= 0.05;
-          break;
-      }
-      
-      // 根据历史记录调整
-      const negativeEvents = tenant.interactionHistory.filter(
-        record => record.interactionType === 'complaint' || record.interactionType === 'violation'
-      ).length;
-      
-      score -= negativeEvents * 0.02;
-      
-      return Math.max(0, Math.min(1, score));
-    });
-    
-    return safetyScores.reduce((sum, score) => sum + score, 0) / safetyScores.length * 100;
-  }
+  // 其他辅助方法...
   
-  private calculateSocialCohesion(tenants: Tenant[]): number {
-    if (tenants.length < 2) return 0;
-    
-    let totalConnections = 0;
-    let positiveConnections = 0;
-    
-    tenants.forEach(tenant => {
-      tenant.relationshipNetwork.relationships.forEach(relationship => {
-        totalConnections++;
-        if (relationship.relationshipType === 'friend' || relationship.relationshipType === 'acquaintance') {
-          positiveConnections++;
-        }
-      });
-    });
-    
-    return totalConnections > 0 ? (positiveConnections / totalConnections) * 100 : 0;
-  }
-  
-  private calculateDiversityIndex(tenants: Tenant[]): number {
-    const types = new Set(tenants.map(t => t.type));
-    const ageGroups = new Set(tenants.map(t => this.getAgeGroup(t.age)));
-    const incomeGroups = new Set(tenants.map(t => this.getIncomeGroup(t.financialInfo.monthlyIncome)));
-    
-    const maxDiversity = 3; // 类型、年龄、收入三个维度
-    const actualDiversity = (types.size / Object.keys(TenantType).length) +
-                           (ageGroups.size / 4) + // 假设4个年龄组
-                           (incomeGroups.size / 5); // 假设5个收入组
-    
-    return Math.min(100, (actualDiversity / maxDiversity) * 100);
-  }
-  
-  private analyzeSatisfactionFactors(tenant: Tenant, environment: PropertyEnvironment): SatisfactionFactors {
+  public analyzeSatisfactionFactors(tenant: Tenant, environment: PropertyEnvironment): SatisfactionFactors {
+    // 分析影响租户满意度的各种因素
     const rentAffordability = this.calculateRentAffordability(tenant, environment.property);
     const propertyCondition = environment.property.condition / 100;
     const neighborRelations = this.calculateNeighborRelations(tenant, environment.neighboringTenants);
-    const communityEnvironment = environment.communityMetrics.averageSatisfaction / 100;
-    const serviceQuality = 0.8; // 假设服务质量，实际应从物业管理数据获取
-    const locationConvenience = environment.property.location.conveniences.length / 10; // 简化计算
+    const communityEnvironment = this.calculateCommunityEnvironment(environment.communityMetrics);
+    const serviceQuality = environment.property.serviceQuality / 100;
+    const locationConvenience = this.calculateLocationConvenience(tenant, environment.property);
     
     return {
       rentAffordability,
@@ -291,101 +224,91 @@ class TenantInteractionEngine {
     };
   }
   
-  private getPersonalityRetentionFactors(personality: TenantPersonality): number {
-    // 基于性格特征计算留存倾向
-    return (personality.stability + (1 - personality.adventurous)) / 2;
+  private calculateScheduleCompatibility(s1: any, s2: any): number {
+    // 简化实现
+    return 0.5;
   }
   
-  private assessFinancialStability(tenant: Tenant): number {
-    const incomeStability = tenant.financialInfo.incomeStability;
-    const creditScore = tenant.financialInfo.creditScore / 850; // 标准化信用分数
-    const paymentHistory = tenant.financialInfo.paymentHistory.length > 0 ?
-      tenant.financialInfo.paymentHistory.filter(p => p.onTime).length / tenant.financialInfo.paymentHistory.length :
-      0.5;
-    
-    return (incomeStability + creditScore + paymentHistory) / 3;
-  }
-  
-  private assessMarketAlternatives(tenant: Tenant, environment: PropertyEnvironment): number {
-    const currentRent = environment.property.financialData.currentRent;
-    const marketAverage = environment.marketConditions.averageRent;
-    const vacancyRate = environment.marketConditions.vacancyRate;
-    
-    // 市场替代选择越多，租户越容易离开
-    const priceCompetitiveness = currentRent / marketAverage;
-    const availabilityFactor = vacancyRate; // 空置率高意味着选择多
-    
-    return (priceCompetitiveness + availabilityFactor) / 2;
-  }
-  
-  private calculateScheduleCompatibility(schedule1: any, schedule2: any): number {
-    // 简化的时间表兼容性计算
-    return 0.7; // 占位符实现
-  }
-  
-  private calculateActivityCompatibility(hobbies1: string[], hobbies2: string[]): number {
-    const commonHobbies = hobbies1.filter(hobby => hobbies2.includes(hobby));
-    const totalHobbies = new Set([...hobbies1, ...hobbies2]).size;
-    
-    return totalHobbies > 0 ? commonHobbies.length / totalHobbies : 0;
+  private calculateActivityCompatibility(a1: number, a2: number): number {
+    // 简化实现
+    return 1 - Math.abs(a1 - a2) / 10;
   }
   
   private calculateRentAffordability(tenant: Tenant, property: Property): number {
-    const monthlyIncome = tenant.financialInfo.monthlyIncome;
-    const currentRent = property.financialData.currentRent;
-    const rentToIncomeRatio = currentRent / monthlyIncome;
+    // 计算租金承受能力
+    const incomeStability = 0.8; // 假设的收入稳定性
+    const creditScore = tenant.financials.creditScore / 850; // 标准化信用分数
+    const paymentHistory = tenant.financials.paymentHistory.length > 0 ?
+      tenant.financials.paymentHistory.filter(p => p.status === 'paid').length / tenant.financials.paymentHistory.length :
+      0.5;
     
-    // 理想的租金收入比是30%以下
-    return Math.max(0, 1 - Math.max(0, rentToIncomeRatio - 0.3) / 0.2);
+    const monthlyIncome = tenant.financials.monthlyIncome;
+    const rentToIncomeRatio = property.monthlyRent / monthlyIncome;
+    
+    // 租金不应超过收入的30%为宜
+    const affordabilityScore = rentToIncomeRatio <= 0.3 ? 1 : 
+                              rentToIncomeRatio <= 0.4 ? 0.8 :
+                              rentToIncomeRatio <= 0.5 ? 0.6 :
+                              rentToIncomeRatio <= 0.6 ? 0.4 : 0.2;
+    
+    return (affordabilityScore * 0.6 + creditScore * 0.2 + paymentHistory * 0.2) * incomeStability;
   }
   
   private calculateNeighborRelations(tenant: Tenant, neighbors: Tenant[]): number {
-    if (neighbors.length === 0) return 0.5;
+    // 简化实现
+    return 0.7;
+  }
+  
+  private calculateCommunityEnvironment(metrics: CommunityMetrics): number {
+    // 简化实现
+    return 0.8;
+  }
+  
+  private calculateLocationConvenience(tenant: Tenant, property: Property): number {
+    // 简化实现
+    return 0.6;
+  }
+  
+  private assessFinancialStability(tenant: Tenant): number {
+    // 评估租户财务稳定性
+    return 0.7;
+  }
+  
+  private assessMarketAlternatives(tenant: Tenant, environment: PropertyEnvironment): number {
+    // 评估市场上的替代选择
+    return 0.5;
+  }
+  
+  private getPersonalityRetentionFactors(personalityTraits: PersonalityTrait[]): number {
+    // 基于性格特征计算留存因素
+    const isAdventurous = personalityTraits.includes(PersonalityTrait.SOCIAL);
+    const isStable = personalityTraits.includes(PersonalityTrait.QUIET) || personalityTraits.includes(PersonalityTrait.EASYGOING);
     
-    const relationships = tenant.relationshipNetwork.relationships;
-    let totalScore = 0;
-    let relationshipCount = 0;
-    
-    neighbors.forEach(neighbor => {
-      const relationship = relationships.find(r => r.tenantId === neighbor.id);
-      if (relationship) {
-        relationshipCount++;
-        switch (relationship.relationshipType) {
-          case 'friend': totalScore += 1; break;
-          case 'acquaintance': totalScore += 0.7; break;
-          case 'neutral': totalScore += 0.5; break;
-          case 'dislike': totalScore += 0.3; break;
-          case 'conflict': totalScore += 0; break;
-        }
-      } else {
-        relationshipCount++;
-        totalScore += 0.5; // 中性关系
-      }
+    return isStable ? 0.8 : (isAdventurous ? 0.4 : 0.6);
+  }
+  
+  private calculateDiversityIndex(tenants: Tenant[]): number {
+    // 计算多样性指数
+    const typeCount = new Map<TenantType, number>();
+    tenants.forEach(tenant => {
+      typeCount.set(tenant.type, (typeCount.get(tenant.type) || 0) + 1);
     });
     
-    return relationshipCount > 0 ? totalScore / relationshipCount : 0.5;
-  }
-  
-  private getAgeGroup(age: number): string {
-    if (age < 25) return 'young';
-    if (age < 40) return 'adult';
-    if (age < 60) return 'middle-aged';
-    return 'senior';
-  }
-  
-  private getIncomeGroup(income: number): string {
-    if (income < 3000) return 'low';
-    if (income < 6000) return 'lower-middle';
-    if (income < 10000) return 'middle';
-    if (income < 15000) return 'upper-middle';
-    return 'high';
+    // 使用Shannon多样性指数
+    let shannonIndex = 0;
+    const totalTenants = tenants.length;
+    
+    typeCount.forEach(count => {
+      const proportion = count / totalTenants;
+      shannonIndex -= proportion * Math.log(proportion);
+    });
+    
+    // 归一化到0-100
+    return Math.min(100, shannonIndex * 100);
   }
 }
 
-/**
- * 租户管理服务
- * 提供租户相关的核心业务逻辑
- */
+// 导出租户服务
 export class TenantService {
   private interactionEngine: TenantInteractionEngine;
   
@@ -396,366 +319,311 @@ export class TenantService {
   /**
    * 计算租户满意度
    */
-  calculateTenantSatisfaction(tenant: Tenant, environment: PropertyEnvironment): number {
-    const factors = this.interactionEngine.analyzeSatisfactionFactors(tenant, environment);
-    const weights = {
-      rentAffordability: 0.25,
-      propertyCondition: 0.20,
-      neighborRelations: 0.15,
-      communityEnvironment: 0.15,
-      serviceQuality: 0.15,
-      locationConvenience: 0.10
+  calculateTenantSatisfaction(tenant: Tenant, property: Property, neighbors: Tenant[]): number {
+    const environment: PropertyEnvironment = {
+      property,
+      neighboringTenants: neighbors,
+      communityMetrics: this.interactionEngine.evaluateCommunityAtmosphere(neighbors),
+      marketConditions: {
+        averageRent: 1000, // 示例值
+        vacancyRate: 0.05, // 示例值
+        competitionLevel: 0.7 // 示例值
+      }
     };
     
-    let satisfaction = 0;
-    Object.entries(factors).forEach(([factor, value]) => {
-      satisfaction += value * weights[factor as keyof typeof weights];
-    });
+    const factors = this.interactionEngine.analyzeSatisfactionFactors(tenant, environment);
     
-    // 应用个性化调整
-    satisfaction = this.applyPersonalityAdjustments(satisfaction, tenant.personality);
+    // 基础满意度计算
+    let satisfaction = (
+      factors.rentAffordability * 0.25 +
+      factors.propertyCondition * 0.2 +
+      factors.neighborRelations * 0.15 +
+      factors.communityEnvironment * 0.15 +
+      factors.serviceQuality * 0.15 +
+      factors.locationConvenience * 0.1
+    ) * 100;
     
-    return Math.max(0, Math.min(100, satisfaction * 100));
+    // 应用性格调整
+    satisfaction = this.applyPersonalityAdjustments(satisfaction, tenant.personalityTraits);
+    
+    return Math.min(100, Math.max(0, satisfaction));
   }
   
   /**
-   * 模拟租户行为
+   * 模拟租户互动
    */
-  simulateTenantBehavior(tenant: Tenant, environment: PropertyEnvironment, deltaTime: number): TenantEvent[] {
-    const events: TenantEvent[] = [];
+  simulateTenantInteractions(tenants: Tenant[], deltaTime: number): void {
+    // 随机选择租户进行互动
+    for (let i = 0; i < tenants.length; i++) {
+      const tenant = tenants[i];
+      const personalityTraits = tenant.personalityTraits;
+      
+      // 社交型租户更可能发起互动
+      if (personalityTraits.includes(PersonalityTrait.SOCIAL) && Math.random() < 0.05 * deltaTime) {
+        // 随机选择另一个租户
+        const otherIndex = Math.floor(Math.random() * tenants.length);
+        if (otherIndex !== i) {
+          const otherTenant = tenants[otherIndex];
+          this.processTenantInteraction(tenant, otherTenant);
+        }
+      }
+    }
+  }
+  
+  /**
+   * 处理租户互动
+   */
+  private processTenantInteraction(tenant1: Tenant, tenant2: Tenant): InteractionResult {
+    // 计算互动结果
+    const compatibilityScore = this.interactionEngine.calculateSatisfactionImpact(tenant1, [tenant2]);
     
-    // 基于满意度和性格生成事件
-    const satisfaction = tenant.satisfactionLevel;
-    const personality = tenant.personality;
+    // 根据兼容性生成互动结果
+    let satisfactionChange = 0;
+    let relationshipChange = 0;
     
-    // 低满意度可能产生投诉
-    if (satisfaction < 30 && Math.random() < 0.1 * deltaTime) {
-      events.push(this.generateComplaintEvent(tenant, environment));
+    if (compatibilityScore > 0.5) {
+      // 积极互动
+      satisfactionChange = Math.random() * 5;
+      relationshipChange = Math.random() * 10;
+      
+      // 如果第二个租户乐于助人，增加第一个租户的满意度
+      if (tenant2.personalityTraits.includes(PersonalityTrait.FRIENDLY)) {
+        satisfactionChange += 2;
+      }
+    } else if (compatibilityScore < -0.2) {
+      // 消极互动
+      satisfactionChange = -Math.random() * 8;
+      relationshipChange = -Math.random() * 15;
+    } else {
+      // 中性互动
+      satisfactionChange = Math.random() * 2 - 1;
+      relationshipChange = Math.random() * 4 - 2;
     }
     
-    // 高社交性租户可能组织活动
-    if (personality.sociability > 0.7 && Math.random() < 0.05 * deltaTime) {
-      events.push(this.generateSocialEvent(tenant));
+    // 更新租户状态
+    tenant1.satisfactionLevel = Math.min(100, Math.max(0, tenant1.satisfactionLevel + satisfactionChange));
+    
+    // 更新关系
+    let relationship = tenant1.relationships.find(r => r.tenantId === tenant2.id);
+    if (!relationship) {
+      relationship = {
+        tenantId: tenant2.id,
+        relationshipType: 'neutral',
+        strength: 0,
+        interactions: 0,
+        lastInteractionDate: new Date().toISOString(),
+        notes: ''
+      };
+      tenant1.relationships.push(relationship);
     }
     
-    // 根据生活方式生成日常事件
-    if (Math.random() < 0.02 * deltaTime) {
-      events.push(this.generateLifestyleEvent(tenant));
+    relationship.strength = Math.min(100, Math.max(-100, relationship.strength + relationshipChange));
+    relationship.interactions += 1;
+    relationship.lastInteractionDate = new Date().toISOString();
+    
+    // 根据关系强度更新关系类型
+    if (relationship.strength > 60) {
+      relationship.relationshipType = 'friend';
+    } else if (relationship.strength < -30) {
+      relationship.relationshipType = 'conflict';
+    } else {
+      relationship.relationshipType = 'neutral';
     }
     
-    return events;
+    return {
+      satisfactionChange,
+      relationshipChange,
+      communityImpact: compatibilityScore * 0.1
+    };
+  }
+  
+  /**
+   * 应用性格调整到满意度
+   */
+  private applyPersonalityAdjustments(baseSatisfaction: number, personalityTraits: PersonalityTrait[]): number {
+    let adjustment = 0;
+    
+    // 乐观的租户满意度更高
+    if (personalityTraits.includes(PersonalityTrait.FRIENDLY)) {
+      adjustment += 5;
+    }
+    
+    // 苛刻的租户满意度更低
+    if (personalityTraits.includes(PersonalityTrait.DEMANDING)) {
+      adjustment -= 8;
+    }
+    
+    // 随和的租户满意度更高
+    if (personalityTraits.includes(PersonalityTrait.EASYGOING)) {
+      adjustment += 3;
+    }
+    
+    return baseSatisfaction + adjustment;
   }
   
   /**
    * 预测租户行为
    */
-  predictTenantBehavior(tenant: Tenant, environment: PropertyEnvironment): TenantBehaviorPrediction {
+  predictTenantBehavior(tenant: Tenant, property: Property, neighbors: Tenant[]): TenantBehaviorPrediction {
+    const environment: PropertyEnvironment = {
+      property,
+      neighboringTenants: neighbors,
+      communityMetrics: this.interactionEngine.evaluateCommunityAtmosphere(neighbors),
+      marketConditions: {
+        averageRent: 1000, // 示例值
+        vacancyRate: 0.05, // 示例值
+        competitionLevel: 0.7 // 示例值
+      }
+    };
+    
     const retentionProbability = this.interactionEngine.predictTenantRetention(tenant, environment);
-    const satisfactionTrend = this.analyzeSatisfactionTrend(tenant);
-    const riskFactors = this.identifyRiskFactors(tenant, environment);
-    const recommendedActions = this.generateRecommendations(tenant, environment, riskFactors);
-    const predictedEvents = this.predictUpcomingEvents(tenant, environment);
+    
+    // 识别风险因素
+    const riskFactors: string[] = [];
+    
+    // 租金过高是风险
+    if (tenant.financials.monthlyIncome < property.monthlyRent * 3) {
+      riskFactors.push('租金负担过重');
+    }
+    
+    // 满意度过低是风险
+    if (tenant.satisfactionLevel < 40) {
+      riskFactors.push('满意度过低');
+    }
+    
+    // 投诉过多是风险
+    if (tenant.interactions.filter(h => h.type === 'complaint').length > 3) {
+      riskFactors.push('投诉频繁');
+    }
+    
+    // 生成建议行动
+    const recommendedActions: string[] = [];
+    
+    if (riskFactors.includes('租金负担过重')) {
+      recommendedActions.push('考虑调整租金或提供分期付款选项');
+    }
+    
+    if (riskFactors.includes('满意度过低')) {
+      recommendedActions.push('安排面谈了解不满原因');
+      recommendedActions.push('提供物业服务升级');
+    }
+    
+    if (riskFactors.includes('投诉频繁')) {
+      recommendedActions.push('优先处理历史投诉');
+      recommendedActions.push('制定专门的服务改进计划');
+    }
+    
+    // 预测满意度趋势
+    let satisfactionTrend: 'improving' | 'stable' | 'declining';
+    
+    if (riskFactors.length > 2) {
+      satisfactionTrend = 'declining';
+    } else if (riskFactors.length === 0 && tenant.satisfactionLevel > 70) {
+      satisfactionTrend = 'improving';
+    } else {
+      satisfactionTrend = 'stable';
+    }
     
     return {
       retentionProbability,
       satisfactionTrend,
       riskFactors,
       recommendedActions,
-      predictedEvents
+      predictedEvents: [] // 简化实现
     };
   }
   
   /**
-   * 处理租户互动
+   * 匹配租户与物业
    */
-  processTenantInteraction(tenant1: Tenant, tenant2: Tenant, interactionType: string): InteractionResult {
-    const compatibility = this.interactionEngine.calculatePersonalityCompatibility(
-      tenant1.personality,
-      tenant2.personality
-    );
-    
-    let satisfactionChange = 0;
-    let relationshipChange = 0;
-    let communityImpact = 0;
-    let eventGenerated: TenantEvent | undefined;
-    
-    switch (interactionType) {
-      case 'friendly_chat':
-        satisfactionChange = compatibility * 5;
-        relationshipChange = 0.1;
-        communityImpact = 2;
-        break;
-        
-      case 'noise_complaint':
-        satisfactionChange = -10;
-        relationshipChange = -0.2;
-        communityImpact = -5;
-        eventGenerated = this.generateNoiseComplaintEvent(tenant1, tenant2);
-        break;
-        
-      case 'help_request':
-        if (tenant2.personality.helpfulness > 0.5) {
-          satisfactionChange = 8;
-          relationshipChange = 0.15;
-          communityImpact = 3;
-        } else {
-          satisfactionChange = -2;
-          relationshipChange = -0.05;
-        }
-        break;
-        
-      case 'social_gathering':
-        satisfactionChange = compatibility * 10;
-        relationshipChange = 0.2;
-        communityImpact = 8;
-        break;
-    }
-    
-    return {
-      satisfactionChange,
-      relationshipChange,
-      communityImpact,
-      eventGenerated
-    };
-  }
-  
-  /**
-   * 评估社区健康度
-   */
-  evaluateCommunityHealth(tenants: Tenant[]): CommunityMetrics {
-    return this.interactionEngine.evaluateCommunityAtmosphere(tenants);
-  }
-  
-  /**
-   * 生成租户匹配建议
-   */
-  generateTenantMatchingSuggestions(property: Property, candidateTenants: Tenant[], existingTenants: Tenant[]): Tenant[] {
-    return candidateTenants
-      .map(candidate => ({
-        tenant: candidate,
-        score: this.calculateMatchingScore(candidate, existingTenants, property)
-      }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5)
-      .map(item => item.tenant);
-  }
-  
-  // 私有辅助方法
-  private applyPersonalityAdjustments(baseSatisfaction: number, personality: TenantPersonality): number {
-    let adjustment = 0;
-    
-    // 乐观的租户更容易满意
-    adjustment += (personality.optimism - 0.5) * 0.1;
-    
-    // 要求高的租户更难满意
-    adjustment -= (personality.demandingness - 0.5) * 0.15;
-    
-    // 适应性强的租户更容易满意
-    adjustment += (personality.adaptability - 0.5) * 0.08;
-    
-    return baseSatisfaction + adjustment;
-  }
-  
-  private generateComplaintEvent(tenant: Tenant, environment: PropertyEnvironment): TenantEvent {
-    const complaints = ['noise', 'maintenance', 'cleanliness', 'security', 'neighbors'];
-    const complaint = complaints[Math.floor(Math.random() * complaints.length)];
-    
-    return {
-      id: `complaint_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      tenantId: tenant.id,
-      eventType: 'complaint',
-      description: `Tenant complained about ${complaint}`,
-      severity: tenant.satisfactionLevel < 20 ? 'high' : 'medium',
-      timestamp: new Date(),
-      resolved: false,
-      impact: {
-        satisfactionChange: -5,
-        relationshipChange: -0.1,
-        communityImpact: -3
+  matchTenantToProperty(tenant: Tenant, properties: Property[]): Property[] {
+    // 根据租户偏好和特征匹配最适合的物业
+    return properties.filter(property => {
+      // 检查基本匹配条件
+      if (!tenant.preferences.propertyType.includes(property.type)) {
+        return false;
       }
-    };
-  }
-  
-  private generateSocialEvent(tenant: Tenant): TenantEvent {
-    const events = ['party', 'gathering', 'community_meeting', 'celebration'];
-    const event = events[Math.floor(Math.random() * events.length)];
-    
-    return {
-      id: `social_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      tenantId: tenant.id,
-      eventType: 'social',
-      description: `Tenant organized a ${event}`,
-      severity: 'low',
-      timestamp: new Date(),
-      resolved: true,
-      impact: {
-        satisfactionChange: 5,
-        relationshipChange: 0.1,
-        communityImpact: 8
-      }
-    };
-  }
-  
-  private generateLifestyleEvent(tenant: Tenant): TenantEvent {
-    const events = ['hobby_activity', 'routine_change', 'lifestyle_adjustment'];
-    const event = events[Math.floor(Math.random() * events.length)];
-    
-    return {
-      id: `lifestyle_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      tenantId: tenant.id,
-      eventType: 'lifestyle',
-      description: `Tenant engaged in ${event}`,
-      severity: 'low',
-      timestamp: new Date(),
-      resolved: true,
-      impact: {
-        satisfactionChange: 2,
-        relationshipChange: 0,
-        communityImpact: 1
-      }
-    };
-  }
-  
-  private generateNoiseComplaintEvent(complainant: Tenant, target: Tenant): TenantEvent {
-    return {
-      id: `noise_complaint_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      tenantId: complainant.id,
-      eventType: 'complaint',
-      description: `Noise complaint against tenant ${target.id}`,
-      severity: 'medium',
-      timestamp: new Date(),
-      resolved: false,
-      impact: {
-        satisfactionChange: -8,
-        relationshipChange: -0.2,
-        communityImpact: -5
-      },
-      involvedTenants: [target.id]
-    };
-  }
-  
-  private analyzeSatisfactionTrend(tenant: Tenant): 'improving' | 'stable' | 'declining' {
-    // 基于历史满意度数据分析趋势
-    // 这里简化处理，实际应该基于历史数据
-    const currentSatisfaction = tenant.satisfactionLevel;
-    
-    if (currentSatisfaction > 70) return 'stable';
-    if (currentSatisfaction > 40) return 'stable';
-    return 'declining';
-  }
-  
-  private identifyRiskFactors(tenant: Tenant, environment: PropertyEnvironment): string[] {
-    const risks: string[] = [];
-    
-    if (tenant.satisfactionLevel < 40) {
-      risks.push('Low satisfaction level');
-    }
-    
-    if (tenant.financialInfo.monthlyIncome < environment.property.financialData.currentRent * 3) {
-      risks.push('Financial strain');
-    }
-    
-    if (environment.communityMetrics.noiseLevel > 70) {
-      risks.push('High community noise level');
-    }
-    
-    if (tenant.interactionHistory.filter(h => h.interactionType === 'complaint').length > 3) {
-      risks.push('Frequent complaints');
-    }
-    
-    return risks;
-  }
-  
-  private generateRecommendations(tenant: Tenant, environment: PropertyEnvironment, riskFactors: string[]): string[] {
-    const recommendations: string[] = [];
-    
-    if (riskFactors.includes('Low satisfaction level')) {
-      recommendations.push('Schedule a personal meeting to address concerns');
-      recommendations.push('Consider rent adjustment or property improvements');
-    }
-    
-    if (riskFactors.includes('Financial strain')) {
-      recommendations.push('Discuss payment plan options');
-      recommendations.push('Provide information about financial assistance programs');
-    }
-    
-    if (riskFactors.includes('High community noise level')) {
-      recommendations.push('Implement noise reduction measures');
-      recommendations.push('Establish community quiet hours');
-    }
-    
-    if (riskFactors.includes('Frequent complaints')) {
-      recommendations.push('Investigate and address underlying issues');
-      recommendations.push('Improve communication channels');
-    }
-    
-    return recommendations;
-  }
-  
-  private predictUpcomingEvents(tenant: Tenant, environment: PropertyEnvironment): TenantEvent[] {
-    const events: TenantEvent[] = [];
-    
-    // 基于模式预测可能的事件
-    if (tenant.satisfactionLevel < 30) {
-      events.push({
-        id: `predicted_complaint_${Date.now()}`,
-        tenantId: tenant.id,
-        eventType: 'complaint',
-        description: 'Predicted complaint based on low satisfaction',
-        severity: 'medium',
-        timestamp: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 一周后
-        resolved: false,
-        impact: {
-          satisfactionChange: -10,
-          relationshipChange: -0.1,
-          communityImpact: -5
-        }
-      });
-    }
-    
-    return events;
-  }
-  
-  private calculateMatchingScore(candidate: Tenant, existingTenants: Tenant[], property: Property): number {
-    let score = 50; // 基础分数
-    
-    // 财务匹配度
-    const rentAffordability = candidate.financialInfo.monthlyIncome / property.financialData.currentRent;
-    if (rentAffordability >= 3) score += 20;
-    else if (rentAffordability >= 2.5) score += 10;
-    else if (rentAffordability < 2) score -= 20;
-    
-    // 与现有租户的兼容性
-    if (existingTenants.length > 0) {
-      const avgCompatibility = existingTenants.reduce((sum, existing) => {
-        return sum + this.interactionEngine.calculatePersonalityCompatibility(
-          candidate.personality,
-          existing.personality
-        );
-      }, 0) / existingTenants.length;
       
-      score += avgCompatibility * 30;
-    }
-    
-    // 物业类型匹配度
-    const typeMatch = this.calculatePropertyTypeMatch(candidate, property);
-    score += typeMatch * 20;
-    
-    return Math.max(0, Math.min(100, score));
+      if (property.area < tenant.preferences.minArea || property.area > tenant.preferences.maxArea) {
+        return false;
+      }
+      
+      if (property.monthlyRent > tenant.preferences.maxRent) {
+        return false;
+      }
+      
+      // 检查特殊需求
+      if (tenant.preferences.needsParking && !property.hasParking) {
+        return false;
+      }
+      
+      if (tenant.preferences.petFriendly && !property.isPetFriendly) {
+        return false;
+      }
+      
+      return true;
+    }).sort((a, b) => {
+      // 计算匹配分数
+      const scoreA = this.calculateMatchScore(tenant, a);
+      const scoreB = this.calculateMatchScore(tenant, b);
+      return scoreB - scoreA; // 降序排列
+    });
   }
   
-  private calculatePropertyTypeMatch(tenant: Tenant, property: Property): number {
-    // 根据租户类型和物业类型计算匹配度
-    const matches: Record<string, PropertyType[]> = {
-      [TenantType.FAMILY]: [PropertyType.RESIDENTIAL, PropertyType.TOWNHOUSE],
-      [TenantType.STUDENT]: [PropertyType.RESIDENTIAL, PropertyType.SHARED],
-      [TenantType.PROFESSIONAL]: [PropertyType.RESIDENTIAL, PropertyType.LUXURY],
-      [TenantType.ELDERLY]: [PropertyType.RESIDENTIAL, PropertyType.ASSISTED_LIVING],
-      [TenantType.COUPLE]: [PropertyType.RESIDENTIAL, PropertyType.LUXURY]
-    };
+  /**
+   * 计算租户与物业的匹配分数
+   */
+  private calculateMatchScore(tenant: Tenant, property: Property): number {
+    let score = 0;
     
-    const preferredTypes = matches[tenant.type] || [];
-    return preferredTypes.includes(property.type) ? 1 : 0.5;
+    // 租金承受能力
+    const rentAffordability = tenant.financials.monthlyIncome / property.monthlyRent;
+    score += Math.min(1, rentAffordability / 4) * 30; // 最高30分
+    
+    // 面积匹配度
+    const idealArea = (tenant.preferences.minArea + tenant.preferences.maxArea) / 2;
+    const areaDifference = Math.abs(property.area - idealArea) / idealArea;
+    score += (1 - Math.min(1, areaDifference)) * 20; // 最高20分
+    
+    // 位置便利性
+    if (tenant.preferences.locationPreferences.nearSchool && property.isNearSchool) {
+      score += 10;
+    }
+    
+    if (tenant.preferences.locationPreferences.nearTransport && property.isNearTransport) {
+      score += 10;
+    }
+    
+    if (tenant.preferences.locationPreferences.nearShopping && property.isNearShopping) {
+      score += 10;
+    }
+    
+    if (tenant.preferences.locationPreferences.quietArea && property.isQuietArea) {
+      score += 10;
+    }
+    
+    // 设施匹配
+    const matchedFacilities = property.facilities.filter(f => 
+      tenant.preferences.preferredFacilities.includes(f.name)
+    ).length;
+    
+    score += (matchedFacilities / Math.max(1, tenant.preferences.preferredFacilities.length)) * 20;
+    
+    return score;
+  }
+  
+  /**
+   * 获取租户类型与物业类型的默认匹配关系
+   */
+  getDefaultPropertyTypeMatches(): Record<TenantType, PropertyType[]> {
+    return {
+      [TenantType.INDIVIDUAL]: [PropertyType.RESIDENTIAL],
+      [TenantType.FAMILY]: [PropertyType.RESIDENTIAL],
+      [TenantType.STUDENT]: [PropertyType.RESIDENTIAL],
+      [TenantType.BUSINESS]: [PropertyType.COMMERCIAL, PropertyType.OFFICE],
+      [TenantType.STARTUP]: [PropertyType.OFFICE],
+      [TenantType.CORPORATION]: [PropertyType.OFFICE, PropertyType.COMMERCIAL]
+    };
   }
 }
 

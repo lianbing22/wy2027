@@ -1,11 +1,14 @@
 // 租户类型枚举
 export enum TenantType {
-  INDIVIDUAL = 'individual',     // 个人租户
-  FAMILY = 'family',            // 家庭租户
-  STUDENT = 'student',          // 学生租户
-  BUSINESS = 'business',        // 商业租户
-  STARTUP = 'startup',          // 初创企业
-  CORPORATION = 'corporation'    // 大型企业
+  INDIVIDUAL = 'individual',    // 个人
+  FAMILY = 'family',           // 家庭
+  STUDENT = 'student',         // 学生
+  BUSINESS = 'business',       // 企业
+  STARTUP = 'startup',         // 初创公司
+  CORPORATION = 'corporation',  // 大公司
+  PROFESSIONAL = 'professional', // 专业人士
+  ELDERLY = 'elderly',         // 老年人
+  COUPLE = 'couple'            // 情侣/夫妇
 }
 
 // 租户状态枚举
@@ -26,7 +29,16 @@ export enum PersonalityTrait {
   EASYGOING = 'easygoing',     // 随和
   PERFECTIONIST = 'perfectionist', // 完美主义
   PARTY_LOVER = 'party_lover',  // 聚会爱好者
-  WORKAHOLIC = 'workaholic'     // 工作狂
+  WORKAHOLIC = 'workaholic',    // 工作狂
+  NOISE_LEVEL = 'noise_level',  // 噪音水平
+  CLEANLINESS = 'cleanliness',  // 清洁度
+  STABILITY = 'stability',      // 稳定性
+  ADVENTUROUS = 'adventurous',  // 冒险精神
+  SOCIABILITY = 'sociability',  // 社交能力
+  HELPFULNESS = 'helpfulness',  // 乐于助人
+  OPTIMISM = 'optimism',        // 乐观主义
+  DEMANDINGNESS = 'demandingness', // 要求苛刻
+  ADAPTABILITY = 'adaptability' // 适应能力
 }
 
 // 租户偏好
@@ -110,6 +122,7 @@ export interface LifestylePattern {
   noiseLevel: number;          // 噪音水平 (1-10)
   cleanlinessLevel: number;    // 清洁度 (1-10)
   maintenanceRequests: number; // 月均维护请求数
+  hobbies: string[];           // 兴趣爱好列表
 }
 
 // 主租户接口

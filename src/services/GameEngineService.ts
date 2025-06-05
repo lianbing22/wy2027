@@ -1,9 +1,7 @@
-import { GameState, GamePhase, PlayerResources, Property, StoryProgress } from '@types/game-state';
-import { Tenant } from '@types/tenant-system';
-import { MarketEvent, MarketTrendAnalysis, Supplier } from '@types/market';
-import { ExplorationMission, Equipment } from '@types/exploration';
-import { AuctionItem } from '@types/auction';
-import { Achievement } from '@types/achievement';
+import { GameState, GamePhase, PlayerResources, Property } from '../types/game-state';
+import { Tenant } from '../types/tenant-system';
+import { MarketEvent, MarketAnalysis } from '../types/market';
+import { ExplorationMission, Equipment, EquipmentStatus } from '../types/exploration';
 
 // 事件总线接口
 export interface EventBus {
@@ -155,7 +153,7 @@ export class TenantEngine implements SubEngine {
       
       // 基于投诉处理
       if (tenant.complaints.length > 0) {
-        const unresolvedComplaints = tenant.complaints.filter(c => !c.resolved);
+        const unresolvedComplaints = tenant.complaints.filter((c: any) => !c.resolved);
         satisfactionChange -= unresolvedComplaints.length * 2;
       }
       
@@ -217,7 +215,7 @@ export class TenantEngine implements SubEngine {
     const tenant2 = this.gameState.tenants[index2];
     
     // 检查是否住在同一物业
-    const shareProperty = tenant1.propertyIds.some(id => tenant2.propertyIds.includes(id));
+    const shareProperty = tenant1.propertyId === tenant2.propertyId;
     
     if (shareProperty) {
       // 计算互动结果
@@ -253,15 +251,33 @@ export class TenantEngine implements SubEngine {
     score += personalityMatch * 10;
     
     // 生活习惯匹配度
-    const lifestyleMatch = tenant1.lifestyle.noiseLevel === tenant2.lifestyle.noiseLevel ? 10 : -10;
+    const lifestyleMatch = tenant1.lifestylePattern.noiseLevel === tenant2.lifestylePattern.noiseLevel ? 10 : -10;
     score += lifestyleMatch;
     
     // 偏好匹配度
-    const preferenceMatch = tenant1.preferences.filter(pref => 
-      tenant2.preferences.includes(pref)
-    ).length;
+    // 比较关键偏好是否匹配
+    let preferenceMatch = 0;
     
-    score += preferenceMatch * 5;
+    // 检查位置偏好匹配
+    if (tenant1.preferences.locationPreferences.quietArea === tenant2.preferences.locationPreferences.quietArea) {
+      preferenceMatch += 5;
+    }
+    
+    // 检查设施偏好
+    if (tenant1.preferences.needsParking === tenant2.preferences.needsParking) {
+      preferenceMatch += 5;
+    }
+    
+    // 检查宠物和吸烟偏好
+    if (tenant1.preferences.petFriendly === tenant2.preferences.petFriendly) {
+      preferenceMatch += 5;
+    }
+    
+    if (tenant1.preferences.smokingAllowed === tenant2.preferences.smokingAllowed) {
+      preferenceMatch += 5;
+    }
+    
+    score += preferenceMatch;
     
     return Math.max(0, Math.min(100, score));
   }
@@ -272,7 +288,7 @@ export class MarketEngine implements SubEngine {
   private gameState: GameState | null = null;
   private eventBus: EventBus | null = null;
   private scheduler: Scheduler = new SimpleScheduler();
-  private marketTrends: MarketTrendAnalysis | null = null;
+  private marketTrends: MarketAnalysis | null = null;
 
   initialize(gameState: GameState, eventBus: EventBus): void {
     this.gameState = gameState;
@@ -320,7 +336,7 @@ export class MarketEngine implements SubEngine {
     if (!this.gameState) return;
     
     // 生成新的市场趋势
-    const newTrend: MarketTrendAnalysis = {
+    const newTrend: MarketAnalysis = {
       overallTrend: this.generateOverallTrend(),
       priceIndex: this.calculatePriceIndex(),
       demandIndex: this.calculateDemandIndex(),
@@ -347,7 +363,7 @@ export class MarketEngine implements SubEngine {
     const suppliers = this.gameState.suppliers;
     
     suppliers.forEach(supplier => {
-      supplier.services.forEach(service => {
+      supplier.services.forEach(() => {
         // 基于趋势调整价格
         let priceAdjustment = 0;
         
@@ -386,28 +402,33 @@ export class MarketEngine implements SubEngine {
     const eventChance = 0.01; // 每次更新1%的几率
     
     if (Math.random() < eventChance) {
-      const possibleEvents = [
-        '供应短缺',
-        '价格暴涨',
-        '价格暴跌',
-        '新供应商进入市场',
-        '供应商退出市场',
-        '政策变化',
-        '技术革新'
+      // 定义符合MarketEvent.type类型的事件类型
+      const eventTypes: ('economic' | 'policy' | 'natural' | 'social' | 'technological')[] = [
+        'economic',
+        'policy',
+        'natural',
+        'social',
+        'technological'
       ];
       
-      const eventType = possibleEvents[Math.floor(Math.random() * possibleEvents.length)];
+      const eventType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
       const eventMagnitude = Math.floor(Math.random() * 3) + 1; // 1-3级影响
       
       const marketEvent: MarketEvent = {
         id: `event_${Date.now()}`,
         type: eventType,
-        description: `市场发生了${eventType}事件，影响程度为${eventMagnitude}级。`,
+        name: `${eventType}事件`,
+        description: `市场发生了${eventType}类型事件，影响程度为${eventMagnitude}级。`,
+        impact: {
+          priceChange: (Math.random() - 0.5) * eventMagnitude * 20, // -10% to +10% per magnitude
+          demandChange: (Math.random() - 0.5) * eventMagnitude * 15,
+          availabilityChange: (Math.random() - 0.5) * eventMagnitude * 10
+        },
         startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 持续7天
-        affectedCategories: [],
-        magnitudePercent: eventMagnitude * 10,
-        isActive: true
+        endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        duration: 7,
+        affectedSectors: ['property', 'construction', 'services'],
+        affectedRegions: ['all']
       };
       
       // 通过事件总线发送市场事件
@@ -542,7 +563,7 @@ export class ExplorationEngine implements SubEngine {
     console.log(`开始探险: ${mission.name}`);
     
     // 计算探险结束时间
-    const endTime = this.gameState!.gameDay + mission.durationDays;
+    const endTime = this.gameState!.gameDay + mission.duration;
     
     // 添加到活跃探险列表
     this.activeExpeditions.set(mission.id, { mission, endTime });
@@ -551,7 +572,7 @@ export class ExplorationEngine implements SubEngine {
     this.scheduler.schedule(
       `exploration_complete_${mission.id}`,
       () => this.completeExploration(mission.id),
-      mission.durationDays
+      mission.duration
     );
     
     // 通过事件总线发送探险开始事件
@@ -598,22 +619,27 @@ export class ExplorationEngine implements SubEngine {
     
     // 考虑玩家装备
     if (this.gameState && this.gameState.player) {
+      // 获取任务所需的主要技能
+      const requiredSkill = mission.recommendedSkills.length > 0 ? mission.recommendedSkills[0] : null;
+      
       const relevantEquipment = this.gameState.equipment.filter(e => 
-        e.status === 'EQUIPPED' && e.bonuses.some(b => b.type === mission.requiredSkill)
+        e.status === 'EQUIPPED' && requiredSkill && e.bonuses.some((b: any) => b.type === requiredSkill)
       );
       
       // 装备加成
       relevantEquipment.forEach(equipment => {
-        const bonus = equipment.bonuses.find(b => b.type === mission.requiredSkill);
+        const bonus = equipment.bonuses.find((b: any) => b.type === requiredSkill);
         if (bonus) {
           successChance += bonus.value;
         }
       });
       
       // 技能加成
-      const skillCategory = this.gameState.skills.categories[mission.requiredSkill.toLowerCase()];
-      if (skillCategory) {
-        successChance += skillCategory.totalPoints * 2;
+      if (requiredSkill) {
+        const skillCategory = this.gameState.skills.categories[requiredSkill.toLowerCase()];
+        if (skillCategory) {
+          successChance += skillCategory.totalPoints * 2;
+        }
       }
     }
     
@@ -630,11 +656,29 @@ export class ExplorationEngine implements SubEngine {
       isSuccess,
       successChance,
       rewards,
-      experienceGained: isSuccess ? mission.experienceReward : Math.floor(mission.experienceReward / 4),
+      experienceGained: isSuccess ? this.calculateExperienceReward(mission) : Math.floor(this.calculateExperienceReward(mission) / 4),
       message: isSuccess 
         ? `探险成功！你获得了${rewards.length}个奖励。` 
         : '探险失败。获得了一些经验，但没有奖励。'
     };
+  }
+
+  private getDifficultyMultiplier(difficulty: any): number {
+    switch (difficulty) {
+      case 'easy': return 1;
+      case 'normal': return 2;
+      case 'hard': return 3;
+      case 'expert': return 4;
+      case 'legendary': return 5;
+      default: return 2;
+    }
+  }
+
+  private calculateExperienceReward(mission: any): number {
+    // 基于任务难度和持续时间计算经验值奖励
+    const difficultyMultiplier = this.getDifficultyMultiplier(mission.difficulty);
+    const baseExperience = 50; // 基础经验值
+    return Math.floor(baseExperience * difficultyMultiplier * (1 + mission.duration / 10));
   }
 
   private generateRewards(mission: ExplorationMission): any[] {
@@ -649,7 +693,8 @@ export class ExplorationEngine implements SubEngine {
       if (rewardType === 'RESOURCE') {
         const resources = ['cash', 'reputation', 'influence'];
         const resource = resources[Math.floor(Math.random() * resources.length)];
-        const amount = mission.difficulty * (Math.floor(Math.random() * 100) + 50);
+        const difficultyMultiplier = this.getDifficultyMultiplier(mission.difficulty);
+        const amount = difficultyMultiplier * (Math.floor(Math.random() * 100) + 50);
         
         rewards.push({
           type: 'RESOURCE',
@@ -664,7 +709,7 @@ export class ExplorationEngine implements SubEngine {
         // 难度越高，越可能获得稀有装备
         const rarityIndex = Math.min(
           rarities.length - 1,
-          Math.floor(Math.random() * mission.difficulty)
+          Math.floor(Math.random() * this.getDifficultyMultiplier(mission.difficulty))
         );
         
         rewards.push({
@@ -1017,15 +1062,14 @@ export class GameEngineService {
               name: `${reward.rarity} ${reward.equipmentType}`,
               type: reward.equipmentType,
               rarity: reward.rarity,
-              status: 'INVENTORY',
-              condition: 100,
+               status: EquipmentStatus.GOOD,
               bonuses: [{
-                type: mission.requiredSkill,
-                value: reward.bonusValue
+                type: 'success_rate',
+                value: reward.bonusValue,
+                description: `提升${reward.bonusValue}%成功率`
               }],
-              maintenanceRecords: [],
               acquiredDate: new Date().toISOString(),
-              lastUsedDate: null
+              lastUsedDate: undefined
             };
             
             this.addEquipment(newEquipment);
@@ -1047,15 +1091,15 @@ export class GameEngineService {
       // 添加到随机事件列表
       this.gameState.randomEvents.push({
         id: event.id,
-        type: 'MARKET',
+        type: 'market',
         name: event.type,
         description: event.description,
         startTime: event.startDate,
         duration: 7, // 7天
         effects: [{
-          type: 'MARKET_PRICE',
-          value: event.magnitudePercent,
-          target: event.affectedCategories.join(',')
+          type: 'percentage',
+          value: event.impact.priceChange,
+          target: 'market'
         }],
         isActive: true
       });

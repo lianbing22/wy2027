@@ -4,7 +4,11 @@ export enum PropertyType {
   COMMERCIAL = 'commercial',     // 商业
   OFFICE = 'office',            // 办公
   INDUSTRIAL = 'industrial',     // 工业
-  MIXED = 'mixed'               // 混合用途
+  MIXED = 'mixed',               // 混合用途
+  TOWNHOUSE = 'townhouse',       // 联排别墅
+  SHARED = 'shared',             // 共享住宅
+  LUXURY = 'luxury',             // 豪华住宅
+  ASSISTED_LIVING = 'assisted_living' // 辅助生活设施
 }
 
 // 物业状态枚举
@@ -138,6 +142,16 @@ export interface Property {
   purchaseDate: string;
   createdAt: string;
   updatedAt: string;
+  
+  // 额外属性
+  monthlyRent: number;        // 月租金
+  serviceQuality: number;     // 服务质量 (1-100)
+  hasParking: boolean;        // 是否有停车位
+  isPetFriendly: boolean;     // 是否允许宠物
+  isNearSchool: boolean;      // 是否靠近学校
+  isNearTransport: boolean;   // 是否靠近交通
+  isNearShopping: boolean;    // 是否靠近购物中心
+  isQuietArea: boolean;       // 是否安静区域
 }
 
 // 物业搜索过滤器
