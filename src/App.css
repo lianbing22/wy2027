@@ -1,0 +1,907 @@
+/* 应用主样式 */
+.app {
+  min-height: 100vh;
+  background: #f0f2f5;
+}
+
+/* 加载容器 */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: #f0f2f5;
+}
+
+/* 游戏内容区域 */
+.game-content {
+  padding: 24px;
+  min-height: calc(100vh - 64px);
+  background: #f0f2f5;
+}
+
+/* 游戏布局样式 */
+.game-layout {
+  min-height: 100vh;
+}
+
+.game-layout .ant-layout-sider {
+  background: #001529;
+}
+
+.game-layout .ant-layout-header {
+  background: #001529;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.game-layout .ant-layout-content {
+  background: #f0f2f5;
+}
+
+/* 侧边栏样式 */
+.sidebar-logo {
+  height: 32px;
+  margin: 16px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+}
+
+.sidebar-collapsed .sidebar-logo {
+  margin: 16px 8px;
+}
+
+/* 顶部导航样式 */
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-trigger {
+  font-size: 18px;
+  line-height: 64px;
+  padding: 0 24px;
+  cursor: pointer;
+  transition: color 0.3s;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.header-trigger:hover {
+  color: #1890ff;
+}
+
+.notification-bell {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+.notification-bell:hover {
+  color: #1890ff;
+}
+
+.user-avatar {
+  cursor: pointer;
+}
+
+/* 卡片样式增强 */
+.ant-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.3s;
+}
+
+.ant-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* 统计卡片样式 */
+.ant-statistic {
+  text-align: center;
+}
+
+.ant-statistic-title {
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.65);
+  margin-bottom: 4px;
+}
+
+.ant-statistic-content {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+/* 市场组件样式 */
+.marketplace .ant-card-cover {
+  overflow: hidden;
+}
+
+.marketplace .ant-card-cover img {
+  transition: transform 0.3s;
+}
+
+.marketplace .ant-card:hover .ant-card-cover img {
+  transform: scale(1.05);
+}
+
+/* 探险面板样式 */
+.exploration-panel .ant-progress {
+  margin-bottom: 0;
+}
+
+.exploration-panel .ant-list-item-meta-title {
+  margin-bottom: 8px;
+}
+
+/* 成就面板样式 */
+.achievement-panel .achievement-card {
+  transition: all 0.3s;
+}
+
+.achievement-panel .achievement-card:hover {
+  transform: translateY(-2px);
+}
+
+.achievement-panel .achievement-card.completed {
+  border-color: #52c41a;
+  box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.2);
+}
+
+.achievement-panel .achievement-card.locked {
+  opacity: 0.6;
+  filter: grayscale(50%);
+}
+
+/* 租户管理样式 */
+.tenant-manager .tenant-card {
+  transition: all 0.3s;
+}
+
+.tenant-manager .tenant-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.tenant-satisfaction-high {
+  color: #52c41a;
+}
+
+.tenant-satisfaction-medium {
+  color: #faad14;
+}
+
+.tenant-satisfaction-low {
+  color: #ff4d4f;
+}
+
+/* 物业管理样式 */
+.property-manager .property-card {
+  transition: all 0.3s;
+}
+
+.property-manager .property-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.property-occupied {
+  border-left: 4px solid #52c41a;
+}
+
+.property-vacant {
+  border-left: 4px solid #faad14;
+}
+
+.property-maintenance {
+  border-left: 4px solid #ff4d4f;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .game-content {
+    padding: 16px;
+  }
+  
+  .header-right {
+    gap: 8px;
+  }
+  
+  .ant-statistic-content {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 576px) {
+  .game-content {
+    padding: 12px;
+  }
+  
+  .ant-card {
+    margin-bottom: 16px;
+  }
+  
+  .ant-statistic-content {
+    font-size: 18px;
+  }
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.pulse {
+  animation: pulse 2s infinite;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* 自定义标签样式 */
+.status-tag {
+  border-radius: 12px;
+  font-size: 12px;
+  padding: 2px 8px;
+}
+
+/* 进度条样式增强 */
+.ant-progress-line {
+  margin-bottom: 0;
+}
+
+.ant-progress-text {
+  font-size: 12px;
+}
+
+/* 模态框样式 */
+.ant-modal-header {
+  border-radius: 8px 8px 0 0;
+}
+
+.ant-modal-content {
+  border-radius: 8px;
+}
+
+/* 表格样式 */
+.ant-table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ant-table-thead > tr > th {
+  background: #fafafa;
+  font-weight: 600;
+}
+
+/* 按钮样式增强 */
+.ant-btn {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.ant-btn-primary {
+  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.2);
+}
+
+.ant-btn-primary:hover {
+  box-shadow: 0 4px 8px rgba(24, 144, 255, 0.3);
+}
+
+/* 输入框样式 */
+.ant-input,
+.ant-select-selector {
+  border-radius: 6px;
+}
+
+.ant-input:focus,
+.ant-select-focused .ant-select-selector {
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+/* 标签页样式 */
+.ant-tabs-tab {
+  border-radius: 6px 6px 0 0;
+}
+
+.ant-tabs-content-holder {
+  padding-top: 16px;
+}
+
+/* 时间轴样式 */
+.ant-timeline-item-head {
+  border-radius: 50%;
+}
+
+/* 徽章样式 */
+.ant-badge {
+  font-size: 12px;
+}
+
+/* 工具提示样式 */
+.ant-tooltip-inner {
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+/* 消息提示样式 */
+.ant-message {
+  top: 24px;
+}
+
+.ant-message-notice {
+  border-radius: 6px;
+}
+
+/* 通知样式 */
+.ant-notification {
+  top: 24px;
+  right: 24px;
+}
+
+.ant-notification-notice {
+  border-radius: 8px;
+}
+
+/* 抽屉样式 */
+.ant-drawer-content {
+  border-radius: 8px 0 0 8px;
+}
+
+/* 分割线样式 */
+.ant-divider {
+  margin: 16px 0;
+}
+
+/* 空状态样式 */
+.ant-empty {
+  margin: 32px 0;
+}
+
+/* 加载样式 */
+.ant-spin {
+  color: #1890ff;
+}
+
+/* 警告框样式 */
+.ant-alert {
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+/* 描述列表样式 */
+.ant-descriptions {
+  background: white;
+  border-radius: 8px;
+}
+
+.ant-descriptions-item-label {
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+/* 列表样式 */
+.ant-list {
+  background: white;
+  border-radius: 8px;
+}
+
+.ant-list-item {
+  padding: 16px 24px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.ant-list-item:last-child {
+  border-bottom: none;
+}
+
+/* 头像样式 */
+.ant-avatar {
+  border: 2px solid #f0f0f0;
+}
+
+/* 标签样式 */
+.ant-tag {
+  border-radius: 12px;
+  font-size: 12px;
+  padding: 2px 8px;
+  border: none;
+}
+
+/* 选择器样式 */
+.ant-select {
+  border-radius: 6px;
+}
+
+.ant-select-dropdown {
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* 日期选择器样式 */
+.ant-picker {
+  border-radius: 6px;
+}
+
+.ant-picker-dropdown {
+  border-radius: 8px;
+}
+
+/* 数字输入框样式 */
+.ant-input-number {
+  border-radius: 6px;
+}
+
+/* 开关样式 */
+.ant-switch {
+  border-radius: 12px;
+}
+
+/* 滑块样式 */
+.ant-slider-rail {
+  border-radius: 2px;
+}
+
+.ant-slider-track {
+  border-radius: 2px;
+}
+
+.ant-slider-handle {
+  border-radius: 50%;
+}
+
+/* 评分样式 */
+.ant-rate {
+  font-size: 18px;
+}
+
+/* 上传样式 */
+.ant-upload {
+  border-radius: 6px;
+}
+
+.ant-upload-drag {
+  border-radius: 6px;
+}
+
+/* 树形控件样式 */
+.ant-tree {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+/* 级联选择器样式 */
+.ant-cascader {
+  border-radius: 6px;
+}
+
+.ant-cascader-dropdown {
+  border-radius: 6px;
+}
+
+/* 穿梭框样式 */
+.ant-transfer {
+  border-radius: 8px;
+}
+
+/* 自动完成样式 */
+.ant-auto-complete {
+  border-radius: 6px;
+}
+
+/* 颜色选择器样式 */
+.ant-color-picker {
+  border-radius: 6px;
+}
+
+/* 提及样式 */
+.ant-mentions {
+  border-radius: 6px;
+}
+
+/* 分页样式 */
+.ant-pagination {
+  text-align: center;
+  margin-top: 24px;
+}
+
+.ant-pagination-item {
+  border-radius: 6px;
+}
+
+.ant-pagination-item-active {
+  border-color: #1890ff;
+}
+
+/* 回到顶部样式 */
+.ant-back-top {
+  right: 24px;
+  bottom: 24px;
+}
+
+.ant-back-top-content {
+  border-radius: 20px;
+}
+
+/* 锚点样式 */
+.ant-anchor {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+/* 面包屑样式 */
+.ant-breadcrumb {
+  margin-bottom: 16px;
+}
+
+/* 下拉菜单样式 */
+.ant-dropdown {
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* 菜单样式 */
+.ant-menu {
+  border-radius: 6px;
+}
+
+.ant-menu-item {
+  border-radius: 4px;
+  margin: 2px 0;
+}
+
+.ant-menu-submenu-title {
+  border-radius: 4px;
+  margin: 2px 0;
+}
+
+/* 步骤条样式 */
+.ant-steps {
+  margin: 24px 0;
+}
+
+/* 结果页样式 */
+.ant-result {
+  padding: 48px 32px;
+}
+
+/* 骨架屏样式 */
+.ant-skeleton {
+  padding: 24px;
+}
+
+/* 转换样式 */
+.ant-transfer {
+  margin: 16px 0;
+}
+
+/* 图片样式 */
+.ant-image {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* 水印样式 */
+.ant-watermark {
+  position: relative;
+}
+
+/* QR码样式 */
+.ant-qrcode {
+  border-radius: 8px;
+  padding: 16px;
+  background: white;
+}
+
+/* 分割器样式 */
+.ant-splitter {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* 浮动按钮样式 */
+.ant-float-btn {
+  border-radius: 50%;
+}
+
+.ant-float-btn-group {
+  border-radius: 24px;
+}
+
+/* 游览器样式 */
+.ant-tour {
+  border-radius: 8px;
+}
+
+/* 统计数字样式 */
+.ant-statistic {
+  text-align: center;
+}
+
+.ant-statistic-content-value {
+  font-weight: 600;
+}
+
+/* 自定义样式类 */
+.text-center {
+  text-align: center;
+}
+
+.text-left {
+  text-align: left;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.mb-0 {
+  margin-bottom: 0;
+}
+
+.mb-8 {
+  margin-bottom: 8px;
+}
+
+.mb-16 {
+  margin-bottom: 16px;
+}
+
+.mb-24 {
+  margin-bottom: 24px;
+}
+
+.mt-0 {
+  margin-top: 0;
+}
+
+.mt-8 {
+  margin-top: 8px;
+}
+
+.mt-16 {
+  margin-top: 16px;
+}
+
+.mt-24 {
+  margin-top: 24px;
+}
+
+.p-0 {
+  padding: 0;
+}
+
+.p-8 {
+  padding: 8px;
+}
+
+.p-16 {
+  padding: 16px;
+}
+
+.p-24 {
+  padding: 24px;
+}
+
+.w-100 {
+  width: 100%;
+}
+
+.h-100 {
+  height: 100%;
+}
+
+.d-flex {
+  display: flex;
+}
+
+.d-block {
+  display: block;
+}
+
+.d-none {
+  display: none;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.align-center {
+  align-items: center;
+}
+
+.flex-column {
+  flex-direction: column;
+}
+
+.flex-wrap {
+  flex-wrap: wrap;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.cursor-not-allowed {
+  cursor: not-allowed;
+}
+
+.overflow-hidden {
+  overflow: hidden;
+}
+
+.overflow-auto {
+  overflow: auto;
+}
+
+.position-relative {
+  position: relative;
+}
+
+.position-absolute {
+  position: absolute;
+}
+
+.border-radius-8 {
+  border-radius: 8px;
+}
+
+.border-radius-16 {
+  border-radius: 16px;
+}
+
+.box-shadow {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.box-shadow-hover {
+  transition: box-shadow 0.3s;
+}
+
+.box-shadow-hover:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.transition-all {
+  transition: all 0.3s;
+}
+
+.transform-hover:hover {
+  transform: translateY(-2px);
+}
+
+.opacity-50 {
+  opacity: 0.5;
+}
+
+.opacity-75 {
+  opacity: 0.75;
+}
+
+.grayscale {
+  filter: grayscale(100%);
+}
+
+.blur {
+  filter: blur(4px);
+}
+
+.brightness-50 {
+  filter: brightness(0.5);
+}
+
+.contrast-125 {
+  filter: contrast(1.25);
+}
+
+.saturate-150 {
+  filter: saturate(1.5);
+}
+
+.sepia {
+  filter: sepia(100%);
+}
+
+.invert {
+  filter: invert(100%);
+}
+
+.hue-rotate-90 {
+  filter: hue-rotate(90deg);
+}
+
+.backdrop-blur {
+  backdrop-filter: blur(8px);
+}
+
+.backdrop-brightness-50 {
+  backdrop-filter: brightness(0.5);
+}
+
+.backdrop-contrast-125 {
+  backdrop-filter: contrast(1.25);
+}
+
+.backdrop-grayscale {
+  backdrop-filter: grayscale(100%);
+}
+
+.backdrop-hue-rotate-90 {
+  backdrop-filter: hue-rotate(90deg);
+}
+
+.backdrop-invert {
+  backdrop-filter: invert(100%);
+}
+
+.backdrop-opacity-50 {
+  backdrop-filter: opacity(0.5);
+}
+
+.backdrop-saturate-150 {
+  backdrop-filter: saturate(1.5);
+}
+
+.backdrop-sepia {
+  backdrop-filter: sepia(100%);
+}
