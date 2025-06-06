@@ -1,7 +1,7 @@
 import { ExplorationMission, ExplorationResult, ExplorationEvent, ExplorationReward, ExplorationRisk } from '../types/exploration';
 import { Player } from '../types/game-state';
 import { Equipment } from '../types/equipment';
-import { randomUUID } from 'crypto';
+import { randomUUID } from '../utils/uuid';
 
 // 探险难度等级
 export enum DifficultyLevel {
@@ -214,6 +214,63 @@ export class ExplorationService {
     
     const template = missionTemplates[type];
     
+    // 创建任务奖励数组
+    const missionRewards: MissionReward[] = [
+      {
+        type: 'cash',
+        amount: template.rewards.money,
+        description: '任务奖金',
+        money: template.rewards.money
+      },
+      {
+        type: 'experience',
+        amount: template.rewards.experience,
+        description: '经验值'
+      }
+    ];
+    
+    // 添加物品奖励
+    template.rewards.items.forEach(item => {
+      missionRewards.push({
+        type: 'equipment',
+        itemId: item,
+        description: `获得物品: ${item}`
+      });
+    });
+    
+    // 创建任务要求数组
+    const reqObj = this.generateRequirements(type, difficulty);
+    const missionRequirements: MissionRequirement[] = [
+      {
+        type: 'level',
+        value: reqObj.minLevel,
+        description: `需要等级 ${reqObj.minLevel}`
+      },
+      {
+        type: 'cash',
+        value: reqObj.minMoney,
+        description: `需要金币 ${reqObj.minMoney}`
+      }
+    ];
+    
+    // 添加装备要求
+    reqObj.requiredEquipment.forEach(eq => {
+      missionRequirements.push({
+        type: 'equipment',
+        value: eq,
+        description: `需要装备: ${eq}`
+      });
+    });
+    
+    // 添加技能要求
+    reqObj.requiredSkills.forEach(skill => {
+      missionRequirements.push({
+        type: 'skill',
+        value: skill,
+        description: `需要技能: ${skill}`
+      });
+    });
+    
     return {
       id: randomUUID(),
       name: `${template.name} - ${this.getDifficultyName(difficulty)}`,
@@ -221,12 +278,12 @@ export class ExplorationService {
       type,
       difficulty,
       duration: baseDuration,
-      rewards: template.rewards,
+      rewards: missionRewards,
       risks,
-      requirements: this.generateRequirements(type, difficulty),
-      status: ExplorationStatus.AVAILABLE,
-      createdAt: new Date(),
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7天后过期
+      requirements: missionRequirements,
+      status: ExplorationStatus.AVAILABLE as any, // 类型转换修复
+      createdAt: new Date().toISOString(), // 转换为字符串
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 保持日期类型
       successRate: this.calculateSuccessRate(difficulty, risks)
     };
   }

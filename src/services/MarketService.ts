@@ -1,6 +1,7 @@
-import { Vendor, Product, PriceHistory, MarketEvent, MarketTrend, MarketStatistics } from '../types/market';
+import { Vendor, Product, PriceHistory, MarketEvent, MarketStatistics } from '../types/market';
+import { MarketTrend } from '../types/game-state';
 import { GameState } from '../types/game-state';
-import { randomUUID } from 'crypto';
+import { randomUUID } from '../utils/uuid';
 
 /**
  * 市场服务
@@ -163,14 +164,14 @@ export class MarketService {
       return { success: false, totalCost: 0 };
     }
 
-    if (product.stock < quantity) {
+    if ((product.stock || 0) < quantity) {
       return { success: false, totalCost: 0 };
     }
 
     // 更新库存
     const updatedProduct = this.updateProduct(productId, {
-      stock: product.stock - quantity,
-      popularity: product.popularity + 1 // 增加人气
+      stock: (product.stock || 0) - quantity,
+      popularity: (product.popularity || 0) + 1 // 增加人气
     });
 
     if (!updatedProduct) {
@@ -186,7 +187,7 @@ export class MarketService {
       description: `Purchase of ${quantity} units of ${product.name}`,
       timestamp: new Date(),
       affectedProducts: [productId],
-      affectedVendors: [product.vendorId],
+      affectedVendors: product.vendorId ? [product.vendorId] : [],
       marketImpact: {
         demandChange: 1,
         priceChange: 0,
@@ -265,7 +266,7 @@ export class MarketService {
       }
 
       if (filters.inStock !== undefined) {
-        filteredProducts = filteredProducts.filter(p => filters.inStock ? p.stock > 0 : true);
+        filteredProducts = filteredProducts.filter(p => filters.inStock ? (p.stock || 0) > 0 : true);
       }
     }
 
@@ -294,7 +295,7 @@ export class MarketService {
     if (!product) return null;
 
     const updatedProduct = this.updateProduct(productId, {
-      stock: product.stock + quantity
+      stock: (product.stock || 0) + quantity
     });
 
     if (updatedProduct) {
@@ -305,7 +306,7 @@ export class MarketService {
         description: `Restock of ${quantity} units of ${product.name}`,
         timestamp: new Date(),
         affectedProducts: [productId],
-        affectedVendors: [product.vendorId],
+        affectedVendors: product.vendorId ? [product.vendorId] : [],
         marketImpact: {
           demandChange: 0,
           priceChange: -0.5, // 小幅降低价格压力
@@ -334,7 +335,7 @@ export class MarketService {
     const affectedProducts = this.products
       .filter(p => {
         return (affectedCategories.length === 0 || affectedCategories.includes(p.category)) &&
-               (affectedVendors.length === 0 || affectedVendors.includes(p.vendorId));
+               (affectedVendors.length === 0 || (p.vendorId && affectedVendors.includes(p.vendorId)));
       })
       .map(p => p.id);
 

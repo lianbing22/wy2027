@@ -82,6 +82,12 @@ export interface Equipment {
   // 时间信息
   createdAt: string;
   updatedAt: string;
+  
+  // 新增属性以匹配GameEngineService的使用
+  category?: string;
+  effect?: string;
+  requirements?: any;
+  sellPrice?: number;
 }
 
 // 技能类型枚举
@@ -194,6 +200,7 @@ export interface MissionReward {
   amount?: number;
   itemId?: string;
   description: string;
+  money?: number;  // 新增属性以匹配ExplorationService的使用
 }
 
 // 任务要求
@@ -225,6 +232,7 @@ export interface ExplorationMission {
   // 成功率计算
   baseSuccessRate: number;
   currentSuccessRate: number;
+  successRate: number;              // 新增属性以匹配ExplorationService的使用
   
   // 奖励
   rewards: MissionReward[];

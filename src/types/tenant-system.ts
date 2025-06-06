@@ -58,6 +58,7 @@ export interface TenantPreferences {
     nearShopping: boolean;
     quietArea: boolean;
   };
+  quietEnvironment?: number;  // 新增属性以匹配TenantService的使用
 }
 
 // 租户财务信息
@@ -164,6 +165,9 @@ export interface Tenant {
   healthLevel: number;         // 健康水平 (1-100)
   
   // 特殊属性
+  satisfactionFactors?: SatisfactionFactors;
+  moveInDate?: string;
+  description?: string;
   specialNeeds: string[];      // 特殊需求
   achievements: string[];      // 租户成就
   
@@ -231,6 +235,14 @@ export interface TenantEvent {
     stress?: number;
   };
   metadata?: Record<string, any>;
+}
+
+// 租户满意度因素
+export interface SatisfactionFactors {
+  rent: number;          // 租金满意度
+  property: number;      // 物业状况满意度
+  management: number;    // 管理服务满意度
+  community: number;     // 社区环境满意度
 }
 
 // 导入物业类型

@@ -28,7 +28,7 @@ export default defineConfig({
           vendor: ['react', 'react-dom'],
           antd: ['antd'],
           router: ['react-router-dom'],
-          game: ['./src/services/gameStateService.ts']
+          game: ['./src/services/index.ts'] // 修复引用了不存在文件的问题
         }
       }
     }

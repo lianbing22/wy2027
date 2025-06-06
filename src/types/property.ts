@@ -144,6 +144,8 @@ export interface Property {
   updatedAt: string;
   
   // 额外属性
+  description?: string;       // 物业总体描述
+  amenities: string[];        // 设施列表 (简易版，对应UI中的amenityOptions)
   monthlyRent: number;        // 月租金
   serviceQuality: number;     // 服务质量 (1-100)
   hasParking: boolean;        // 是否有停车位

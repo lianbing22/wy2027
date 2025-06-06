@@ -35,17 +35,18 @@ import {
   BarChartOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { useServices } from '../../services';
-import type { Property, PropertyType, PropertyStatus, Tenant } from '../../types';
+import { useServices } from '@/services';
+import { PropertyType as PropertyTypeEnum, PropertyStatus as PropertyStatusEnum, PropertyGrade as PropertyGradeEnum, type Property } from '@/types/property';
+import type { Tenant } from '@/types/tenant-system';
 
 const { Option } = Select;
 const { TabPane } = Tabs;
 
 interface PropertyFormData {
   name: string;
-  type: PropertyType;
+  type: PropertyTypeEnum;
   address: string;
-  size: number;
+  area: number;
   rooms: number;
   bathrooms: number;
   monthlyRent: number;
@@ -78,15 +79,21 @@ const PropertyManager: React.FC = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [form] = Form.useForm();
   
-  const { gameEngine, tenantService, isInitialized } = useServices();
+  const { initialized: isInitialized, services } = useServices();
+  const gameEngine = services?.gameEngine;
+  const tenantService = services?.tenantService;
 
   // 物业类型选项
   const propertyTypes = [
-    { value: 'apartment', label: '公寓' },
-    { value: 'house', label: '独栋房屋' },
-    { value: 'condo', label: '共管公寓' },
-    { value: 'townhouse', label: '联排别墅' },
-    { value: 'studio', label: '单间公寓' }
+    { value: PropertyTypeEnum.RESIDENTIAL, label: '住宅' },
+    { value: PropertyTypeEnum.COMMERCIAL, label: '商业' },
+    { value: PropertyTypeEnum.OFFICE, label: '办公' },
+    { value: PropertyTypeEnum.INDUSTRIAL, label: '工业' },
+    { value: PropertyTypeEnum.MIXED, label: '混合用途' },
+    { value: PropertyTypeEnum.TOWNHOUSE, label: '联排别墅' },
+    { value: PropertyTypeEnum.SHARED, label: '共享住宅' },
+    { value: PropertyTypeEnum.LUXURY, label: '豪华住宅' },
+    { value: PropertyTypeEnum.ASSISTED_LIVING, label: '辅助生活设施' }
   ];
 
   // 设施选项
@@ -97,24 +104,29 @@ const PropertyManager: React.FC = () => {
 
   // 加载数据
   useEffect(() => {
-    if (!isInitialized) return;
+    if (!isInitialized || !services) return;
     loadData();
-  }, [isInitialized]);
+  }, [isInitialized, services]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const gameState = await gameEngine().getGameState();
-      const allTenants = gameState.tenants;
+      if (!gameEngine) {
+        message.error('游戏引擎未初始化');
+        setLoading(false);
+        return;
+      }
+      const gameState = await gameEngine.getGameState();
+      const allTenants = gameState.tenants as Tenant[];
       
-      setProperties(gameState.properties);
+      setProperties(gameState.properties as Property[]);
       setTenants(allTenants);
       
       // 计算统计数据
       const totalProperties = gameState.properties.length;
-      const totalValue = gameState.properties.reduce((sum, p) => sum + (p.value || 0), 0);
-      const monthlyIncome = gameState.properties.reduce((sum, p) => sum + (p.monthlyRent || 0), 0);
-      const occupiedProperties = gameState.properties.filter(p => p.tenantId).length;
+      const totalValue = (gameState.properties as Property[]).reduce((sum: number, p: Property) => sum + (p.currentValue || 0), 0);
+      const monthlyIncome = (gameState.properties as Property[]).reduce((sum: number, p: Property) => sum + (p.monthlyRent || 0), 0);
+      const occupiedProperties = (gameState.properties as Property[]).filter((p: Property) => p.currentTenants && p.currentTenants.length > 0).length;
       const occupancyRate = totalProperties > 0 ? (occupiedProperties / totalProperties) * 100 : 0;
       const averageRent = totalProperties > 0 ? monthlyIncome / totalProperties : 0;
       
@@ -135,28 +147,39 @@ const PropertyManager: React.FC = () => {
   };
 
   // 获取物业状态
-  const getPropertyStatus = (property: Property): PropertyStatus => {
-    if (property.tenantId) return 'occupied';
-    if (property.maintenanceRequired) return 'maintenance';
-    return 'available';
+  const getPropertyStatus = (property: Property): PropertyStatusEnum => {
+    if (property.status && property.status !== PropertyStatusEnum.AVAILABLE) {
+        return property.status;
+    }
+    if (property.currentTenants && property.currentTenants.length > 0) {
+      return PropertyStatusEnum.OCCUPIED;
+    }
+    if (property.condition < 40) {
+      return PropertyStatusEnum.MAINTENANCE;
+    }
+    return PropertyStatusEnum.AVAILABLE;
   };
 
   // 获取状态标签
-  const getStatusTag = (status: PropertyStatus) => {
-    const statusConfig = {
-      available: { color: 'green', text: '可租' },
-      occupied: { color: 'blue', text: '已租' },
-      maintenance: { color: 'orange', text: '维护中' },
-      unavailable: { color: 'red', text: '不可用' }
+  const getStatusTag = (status: PropertyStatusEnum) => {
+    const statusConfig: Record<PropertyStatusEnum, { color: string; text: string }> = {
+      [PropertyStatusEnum.AVAILABLE]: { color: 'green', text: '可租' },
+      [PropertyStatusEnum.OCCUPIED]: { color: 'blue', text: '已租' },
+      [PropertyStatusEnum.MAINTENANCE]: { color: 'orange', text: '维护中' },
+      [PropertyStatusEnum.RENOVATION]: { color: 'gold', text: '装修中' },
+      [PropertyStatusEnum.DAMAGED]: { color: 'red', text: '损坏' }
     };
     const config = statusConfig[status];
+    if (!config) {
+        return <Tag color="default">未知状态</Tag>;
+    }
     return <Tag color={config.color}>{config.text}</Tag>;
   };
 
   // 获取租户信息
   const getTenantInfo = (tenantId?: string) => {
     if (!tenantId) return null;
-    return tenants.find(t => t.id === tenantId);
+    return tenants.find((t: Tenant) => t.id === tenantId);
   };
 
   // 表格列定义
@@ -165,12 +188,12 @@ const PropertyManager: React.FC = () => {
       title: '物业名称',
       dataIndex: 'name',
       key: 'name',
-      render: (text, record) => (
+      render: (text, record: Property) => (
         <Space>
           <Avatar icon={<HomeOutlined />} style={{ backgroundColor: '#1890ff' }} />
           <div>
             <div style={{ fontWeight: 'bold' }}>{text}</div>
-            <div style={{ fontSize: '12px', color: '#666' }}>{record.address}</div>
+            <div style={{ fontSize: '12px', color: '#666' }}>{record.location.address}</div>
           </div>
         </Space>
       )
@@ -179,7 +202,7 @@ const PropertyManager: React.FC = () => {
       title: '类型',
       dataIndex: 'type',
       key: 'type',
-      render: (type: PropertyType) => {
+      render: (type: PropertyTypeEnum) => {
         const typeLabel = propertyTypes.find(t => t.value === type)?.label || type;
         return <Tag>{typeLabel}</Tag>;
       }
@@ -189,7 +212,7 @@ const PropertyManager: React.FC = () => {
       key: 'size',
       render: (_, record) => (
         <div>
-          <div>{record.size}㎡</div>
+          <div>{record.area}㎡</div>
           <div style={{ fontSize: '12px', color: '#666' }}>
             {record.rooms}室{record.bathrooms}卫
           </div>
@@ -205,8 +228,7 @@ const PropertyManager: React.FC = () => {
           value={rent}
           precision={0}
           valueStyle={{ fontSize: '14px' }}
-          prefix={<DollarOutlined />}
-          suffix="元"
+          prefix="¥"
         />
       ),
       sorter: (a, b) => (a.monthlyRent || 0) - (b.monthlyRent || 0)
@@ -214,13 +236,13 @@ const PropertyManager: React.FC = () => {
     {
       title: '状态',
       key: 'status',
-      render: (_, record) => getStatusTag(getPropertyStatus(record))
+      render: (_, record: Property) => getStatusTag(getPropertyStatus(record))
     },
     {
       title: '租户',
       key: 'tenant',
-      render: (_, record) => {
-        const tenant = getTenantInfo(record.tenantId);
+      render: (_, record: Property) => {
+        const tenant = getTenantInfo(record.currentTenants && record.currentTenants.length > 0 ? record.currentTenants[0] : undefined);
         return tenant ? (
           <Space>
             <Avatar size="small" icon={<TeamOutlined />} />
@@ -320,22 +342,55 @@ const PropertyManager: React.FC = () => {
 
   // 处理表单提交
   const handleSubmit = async (values: PropertyFormData) => {
+    setLoading(true);
     try {
+      let newPropertyId = editingProperty ? editingProperty.id : gameEngine.generateId();
+      const newPropertyData: Omit<Property, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'currentTenants' | 'financials' | 'marketData' | 'location' | 'facilities' | 'maintenanceHistory' | 'condition' | 'lastMaintenanceDate' | 'nextMaintenanceDate' | 'purchaseDate' | 'purchasePrice' | 'currentValue' | 'satisfactionRating' | 'popularityScore' | 'serviceQuality' | 'hasParking' | 'isPetFriendly' | 'isNearSchool' | 'isNearTransport' | 'isNearShopping' | 'isQuietArea' > & Partial<Pick<Property, 'purchasePrice' | 'currentValue'>> = {
+        name: values.name,
+        type: values.type,
+        area: values.area,
+        rooms: values.rooms,
+        bathrooms: values.bathrooms,
+        monthlyRent: values.monthlyRent,
+        description: values.description,
+        amenities: values.amenities,
+        specialFeatures: [],
+        grade: PropertyGradeEnum.STANDARD,
+        floors: values.rooms > 3 ? 2 : 1,
+        parkingSpaces: values.area > 100 ? 1 : 0,
+        maxTenants: values.rooms,
+      };
+
+      const fullPropertyData: Partial<Property> = {
+        ...newPropertyData,
+        id: newPropertyId,
+        location: editingProperty?.location || { 
+            address: values.address, 
+            district: 'Default District', 
+            coordinates: { lat: 0, lng: 0}, 
+            nearbyFacilities: { schools: 0, hospitals: 0, shoppingCenters: 0, transportStations: 0, parks: 0},
+            accessibilityScore: 50,
+            environmentScore: 50
+        },
+        status: editingProperty?.status || PropertyStatusEnum.AVAILABLE,
+        currentValue: editingProperty?.currentValue || values.monthlyRent * 12 * 10,
+        condition: 100,
+      };
+
       if (editingProperty) {
-        // 更新物业
-        console.log('更新物业:', editingProperty.id, values);
+        await gameEngine.updateProperty(fullPropertyData as Property);
         message.success('物业更新成功');
       } else {
-        // 添加新物业
-        console.log('添加新物业:', values);
+        await gameEngine.addProperty(fullPropertyData as Property);
         message.success('物业添加成功');
       }
-      
       setModalVisible(false);
       loadData();
     } catch (error) {
       console.error('保存物业失败:', error);
       message.error('保存失败');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -474,7 +529,7 @@ const PropertyManager: React.FC = () => {
           <Row gutter={16}>
             <Col span={8}>
               <Form.Item
-                name="size"
+                name="area"
                 label="面积(㎡)"
                 rules={[{ required: true, message: '请输入面积' }]}
               >
@@ -515,15 +570,16 @@ const PropertyManager: React.FC = () => {
 
           <Form.Item
             name="monthlyRent"
-            label="月租金(元)"
+            label="月租金"
             rules={[{ required: true, message: '请输入月租金' }]}
           >
             <InputNumber
-              min={0}
-              placeholder="月租金"
               style={{ width: '100%' }}
-              formatter={value => `¥ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={value => value!.replace(/¥\s?|(,*)/g, '')}
+              prefix="¥"
+              formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+              parser={value => parseFloat(value?.replace(/[^\d.-]/g, '') || '0')}
+              precision={0}
+              min={0}
             />
           </Form.Item>
 
@@ -584,8 +640,8 @@ const PropertyManager: React.FC = () => {
                   <Card size="small" title="基本信息">
                     <p><strong>名称:</strong> {selectedProperty.name}</p>
                     <p><strong>类型:</strong> {propertyTypes.find(t => t.value === selectedProperty.type)?.label}</p>
-                    <p><strong>地址:</strong> {selectedProperty.address}</p>
-                    <p><strong>面积:</strong> {selectedProperty.size}㎡</p>
+                    <p><strong>地址:</strong> {selectedProperty.location.address}</p>
+                    <p><strong>面积:</strong> {selectedProperty.area}㎡</p>
                     <p><strong>房间:</strong> {selectedProperty.rooms}室{selectedProperty.bathrooms}卫</p>
                     <p><strong>月租金:</strong> ¥{selectedProperty.monthlyRent}</p>
                   </Card>
@@ -593,9 +649,9 @@ const PropertyManager: React.FC = () => {
                 <Col span={12}>
                   <Card size="small" title="状态信息">
                     <p><strong>状态:</strong> {getStatusTag(getPropertyStatus(selectedProperty))}</p>
-                    <p><strong>租户:</strong> {getTenantInfo(selectedProperty.tenantId)?.name || '无'}</p>
+                    <p><strong>租户:</strong> {getTenantInfo(selectedProperty.currentTenants && selectedProperty.currentTenants.length > 0 ? selectedProperty.currentTenants[0] : undefined)?.name || '无'}</p>
                     <p><strong>购买时间:</strong> {selectedProperty.purchaseDate ? new Date(selectedProperty.purchaseDate).toLocaleDateString() : '未知'}</p>
-                    <p><strong>物业价值:</strong> ¥{selectedProperty.value || 0}</p>
+                    <p><strong>物业价值:</strong> ¥{selectedProperty.currentValue || 0}</p>
                   </Card>
                 </Col>
               </Row>
@@ -630,7 +686,7 @@ const PropertyManager: React.FC = () => {
                 <Col span={8}>
                   <Statistic
                     title="物业价值"
-                    value={selectedProperty.value || 0}
+                    value={selectedProperty.currentValue || 0}
                     prefix={<DollarOutlined />}
                     suffix="元"
                   />
@@ -638,7 +694,7 @@ const PropertyManager: React.FC = () => {
                 <Col span={8}>
                   <Statistic
                     title="年化收益率"
-                    value={selectedProperty.value ? ((selectedProperty.monthlyRent || 0) * 12 / selectedProperty.value * 100) : 0}
+                    value={selectedProperty.currentValue ? ((selectedProperty.monthlyRent || 0) * 12 / selectedProperty.currentValue * 100) : 0}
                     precision={2}
                     suffix="%"
                   />

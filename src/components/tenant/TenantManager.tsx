@@ -21,7 +21,8 @@ import {
   List,
   Tabs,
   Badge,
-  Divider
+  Divider,
+  Typography
 } from 'antd';
 import {
   UserOutlined,
@@ -29,26 +30,31 @@ import {
   SmileOutlined,
   FrownOutlined,
   HomeOutlined,
-  CalendarOutlined,
   DollarOutlined,
   MessageOutlined,
   SettingOutlined,
   DeleteOutlined,
   PlusOutlined,
   HeartOutlined,
-  StarOutlined,
   FilterOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { useServices } from '../../services';
-import type { Tenant, TenantType, TenantStatus, Property, SatisfactionFactors } from '../../types';
+import { useServices } from '@/services';
+import { 
+  TenantType as TenantTypeEnum, 
+  TenantStatus as TenantStatusEnum,
+  type Tenant, 
+  type SatisfactionFactors 
+} from '@/types/tenant-system';
+import type { Property } from '@/types/property';
 
 const { Option } = Select;
 const { TabPane } = Tabs;
+const { Paragraph } = Typography;
 
 interface TenantFormData {
   name: string;
-  type: TenantType;
+  type: TenantTypeEnum;
   age: number;
   occupation: string;
   income: number;
@@ -83,15 +89,17 @@ const TenantManager: React.FC = () => {
   const [interactionModalVisible, setInteractionModalVisible] = useState(false);
   const [form] = Form.useForm();
   
-  const { gameEngine, tenantService, isInitialized } = useServices();
+  const { initialized: isInitialized, services } = useServices();
+  const gameEngine = services?.gameEngine;
+  const tenantService = services?.tenantService;
 
   // 租户类型选项
   const tenantTypes = [
-    { value: 'individual', label: '个人' },
-    { value: 'family', label: '家庭' },
-    { value: 'student', label: '学生' },
-    { value: 'professional', label: '专业人士' },
-    { value: 'senior', label: '老年人' }
+    { value: TenantTypeEnum.INDIVIDUAL, label: '个人' },
+    { value: TenantTypeEnum.FAMILY, label: '家庭' },
+    { value: TenantTypeEnum.STUDENT, label: '学生' },
+    { value: TenantTypeEnum.PROFESSIONAL, label: '专业人士' },
+    { value: TenantTypeEnum.ELDERLY, label: '老年人' }
   ];
 
   // 职业选项
@@ -115,24 +123,29 @@ const TenantManager: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const gameState = await gameEngine().getGameState();
-      const allTenants = gameState.tenants;
-      const allProperties = gameState.properties;
+      if (!gameEngine) {
+        message.error("游戏引擎未初始化");
+        setLoading(false);
+        return;
+      }
+      const gameState = await gameEngine.getGameState();
+      const allTenants = gameState.tenants as Tenant[];
+      const allProperties = gameState.properties as Property[];
       
       setTenants(allTenants);
       setProperties(allProperties);
       
       // 计算统计数据
       const totalTenants = allTenants.length;
-      const totalSatisfaction = allTenants.reduce((sum, t) => sum + (t.satisfaction || 0), 0);
+      const totalSatisfaction = allTenants.reduce((sum: number, t: Tenant) => sum + (t.satisfactionLevel || 0), 0);
       const averageSatisfaction = totalTenants > 0 ? totalSatisfaction / totalTenants : 0;
-      const totalIncome = allTenants.reduce((sum, t) => {
-        const property = allProperties.find(p => p.id === t.propertyId);
+      const totalIncome = allTenants.reduce((sum: number, t: Tenant) => {
+        const property = allProperties.find((p: Property) => p.id === t.propertyId);
         return sum + (property?.monthlyRent || 0);
       }, 0);
-      const occupiedProperties = allProperties.filter(p => p.tenantId).length;
+      const occupiedProperties = allProperties.filter((p: Property) => p.currentTenants && p.currentTenants.length > 0).length;
       const occupancyRate = allProperties.length > 0 ? (occupiedProperties / allProperties.length) * 100 : 0;
-      const problemTenants = allTenants.filter(t => (t.satisfaction || 0) < 50).length;
+      const problemTenants = allTenants.filter((t: Tenant) => (t.satisfactionLevel || 0) < 50).length;
       
       setStats({
         totalTenants,
@@ -151,22 +164,23 @@ const TenantManager: React.FC = () => {
   };
 
   // 获取租户状态
-  const getTenantStatus = (tenant: Tenant): TenantStatus => {
-    if (!tenant.propertyId) return 'searching';
-    if (tenant.satisfaction && tenant.satisfaction < 30) return 'unhappy';
-    if (tenant.satisfaction && tenant.satisfaction > 70) return 'happy';
-    return 'neutral';
+  const getTenantStatus = (tenant: Tenant): TenantStatusEnum => {
+    return tenant.status; // Directly use status from tenant object
   };
 
   // 获取状态标签
-  const getStatusTag = (status: TenantStatus) => {
-    const statusConfig = {
-      happy: { color: 'green', text: '满意', icon: <SmileOutlined /> },
-      neutral: { color: 'blue', text: '一般', icon: null },
-      unhappy: { color: 'red', text: '不满', icon: <FrownOutlined /> },
-      searching: { color: 'orange', text: '寻找中', icon: <HomeOutlined /> }
+  const getStatusTag = (status: TenantStatusEnum) => {
+    const statusConfig: Record<TenantStatusEnum, { color: string; text: string; icon: React.ReactNode }> = {
+      [TenantStatusEnum.ACTIVE]: { color: 'green', text: '活跃', icon: <SmileOutlined /> },
+      [TenantStatusEnum.INACTIVE]: { color: 'gray', text: '不活跃', icon: null },
+      [TenantStatusEnum.MOVING_OUT]: { color: 'orange', text: '准备搬出', icon: <HomeOutlined /> },
+      [TenantStatusEnum.OVERDUE]: { color: 'red', text: '逾期', icon: <FrownOutlined /> },
+      [TenantStatusEnum.SUSPENDED]: { color: 'purple', text: '暂停', icon: <UserOutlined /> },
     };
     const config = statusConfig[status];
+    if (!config) {
+        return <Tag>未知状态</Tag>;
+    }
     return (
       <Tag color={config.color} icon={config.icon}>
         {config.text}
@@ -177,7 +191,7 @@ const TenantManager: React.FC = () => {
   // 获取物业信息
   const getPropertyInfo = (propertyId?: string) => {
     if (!propertyId) return null;
-    return properties.find(p => p.id === propertyId);
+    return properties.find((p: Property) => p.id === propertyId);
   };
 
   // 表格列定义
@@ -200,15 +214,15 @@ const TenantManager: React.FC = () => {
       title: '类型',
       dataIndex: 'type',
       key: 'type',
-      render: (type: TenantType) => {
+      render: (type: TenantTypeEnum) => {
         const typeLabel = tenantTypes.find(t => t.value === type)?.label || type;
         return <Tag>{typeLabel}</Tag>;
       }
     },
     {
       title: '满意度',
-      dataIndex: 'satisfaction',
-      key: 'satisfaction',
+      dataIndex: 'satisfactionLevel',
+      key: 'satisfactionLevel',
       render: (satisfaction = 0) => {
         let color = '#52c41a';
         if (satisfaction < 30) color = '#f5222d';
@@ -223,7 +237,7 @@ const TenantManager: React.FC = () => {
           />
         );
       },
-      sorter: (a, b) => (a.satisfaction || 0) - (b.satisfaction || 0)
+      sorter: (a, b) => (a.satisfactionLevel || 0) - (b.satisfactionLevel || 0)
     },
     {
       title: '租住物业',
@@ -242,7 +256,7 @@ const TenantManager: React.FC = () => {
     },
     {
       title: '月收入',
-      dataIndex: 'income',
+      dataIndex: 'financials.monthlyIncome',
       key: 'income',
       render: (income) => (
         <Statistic
@@ -253,7 +267,7 @@ const TenantManager: React.FC = () => {
           suffix="元"
         />
       ),
-      sorter: (a, b) => (a.income || 0) - (b.income || 0)
+      sorter: (a, b) => (a.financials.monthlyIncome || 0) - (b.financials.monthlyIncome || 0)
     },
     {
       title: '状态',
@@ -386,13 +400,7 @@ const TenantManager: React.FC = () => {
 
   // 获取满意度因素详情
   const getSatisfactionFactors = (tenant: Tenant): SatisfactionFactors => {
-    return tenant.satisfactionFactors || {
-      environment: Math.round(Math.random() * 100),
-      price: Math.round(Math.random() * 100),
-      facilities: Math.round(Math.random() * 100),
-      maintenance: Math.round(Math.random() * 100),
-      community: Math.round(Math.random() * 100)
-    };
+    return tenant.satisfactionFactors || { rent: 50, property: 50, management: 50, community: 50 };
   };
 
   return (
@@ -506,113 +514,58 @@ const TenantManager: React.FC = () => {
         >
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                name="name"
-                label="租户姓名"
-                rules={[{ required: true, message: '请输入租户姓名' }]}
-              >
-                <Input placeholder="请输入租户姓名" />
+              <Form.Item name="name" label="姓名" rules={[{ required: true, message: '请输入租户姓名' }]}>
+                <Input />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item
-                name="type"
-                label="租户类型"
-                rules={[{ required: true, message: '请选择租户类型' }]}
-              >
-                <Select placeholder="请选择租户类型">
-                  {tenantTypes.map(type => (
-                    <Option key={type.value} value={type.value}>
-                      {type.label}
-                    </Option>
-                  ))}
+              <Form.Item name="type" label="类型" rules={[{ required: true, message: '请选择租户类型' }]}>
+                <Select>
+                  {tenantTypes.map(t => <Option key={t.value} value={t.value}>{t.label}</Option>)}
                 </Select>
               </Form.Item>
             </Col>
-          </Row>
-
-          <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                name="age"
-                label="年龄"
-                rules={[{ required: true, message: '请输入年龄' }]}
-              >
+              <Form.Item name="age" label="年龄" rules={[{ required: true, message: '请输入年龄' }]}>
+                <InputNumber min={18} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="income" label="月收入" rules={[{ required: true, message: '请输入月收入' }]}>
                 <InputNumber
-                  min={18}
-                  max={100}
-                  placeholder="年龄"
-                  style={{ width: '100%' }}
+                   style={{ width: '100%' }}
+                   prefix="¥"
+                   formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                   parser={(value) => value?.replace(/[^\d]/g, '') || ''}
+                   precision={0}
+                   min={0}
                 />
               </Form.Item>
             </Col>
-            <Col span={12}>
-              <Form.Item
-                name="occupation"
-                label="职业"
-                rules={[{ required: true, message: '请选择职业' }]}
-              >
-                <Select placeholder="请选择职业">
-                  {occupationOptions.map(occupation => (
-                    <Option key={occupation} value={occupation}>
-                      {occupation}
-                    </Option>
+            <Col span={24}>
+               <Form.Item name="propertyId" label="租住物业">
+                 <Select allowClear placeholder="选择一个物业">
+                   {properties.map(p => (
+                     <Option key={p.id} value={p.id}>{p.name} - {p.location.address}</Option>
+                   ))}
+                 </Select>
+               </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item name="preferences" label="偏好">
+                <Select mode="multiple" allowClear placeholder="请选择租户偏好">
+                  {preferenceOptions.map(preference => (
+                    <Option key={preference} value={preference}>{preference}</Option>
                   ))}
                 </Select>
               </Form.Item>
             </Col>
+            <Col span={24}>
+              <Form.Item name="description" label="备注">
+                <Input.TextArea rows={3} placeholder="输入备注信息" />
+              </Form.Item>
+            </Col>
           </Row>
-
-          <Form.Item
-            name="income"
-            label="月收入(元)"
-            rules={[{ required: true, message: '请输入月收入' }]}
-          >
-            <InputNumber
-              min={0}
-              placeholder="月收入"
-              style={{ width: '100%' }}
-              formatter={value => `¥ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={value => value!.replace(/¥\s?|(,*)/g, '')}
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="propertyId"
-            label="分配物业"
-          >
-            <Select placeholder="选择物业" allowClear>
-              {properties.map(property => (
-                <Option key={property.id} value={property.id}>
-                  {property.name} ({property.address})
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="preferences"
-            label="偏好"
-          >
-            <Select
-              mode="multiple"
-              placeholder="选择偏好"
-              options={preferenceOptions.map(preference => ({
-                label: preference,
-                value: preference
-              }))}
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="description"
-            label="描述"
-          >
-            <Input.TextArea
-              rows={3}
-              placeholder="请输入租户描述"
-            />
-          </Form.Item>
 
           <Form.Item>
             <Space>
@@ -649,7 +602,7 @@ const TenantManager: React.FC = () => {
                     <p><strong>类型:</strong> {tenantTypes.find(t => t.value === selectedTenant.type)?.label}</p>
                     <p><strong>年龄:</strong> {selectedTenant.age}岁</p>
                     <p><strong>职业:</strong> {selectedTenant.occupation}</p>
-                    <p><strong>月收入:</strong> ¥{selectedTenant.income}</p>
+                    <p><strong>月收入:</strong> ¥{selectedTenant.financials.monthlyIncome}</p>
                   </Card>
                 </Col>
                 <Col span={12}>
@@ -660,7 +613,7 @@ const TenantManager: React.FC = () => {
                     <p>
                       <strong>满意度:</strong> 
                       <Progress 
-                        percent={selectedTenant.satisfaction || 0} 
+                        percent={selectedTenant.satisfactionLevel || 0} 
                         size="small" 
                         style={{ marginLeft: 8 }}
                       />
@@ -678,15 +631,16 @@ const TenantManager: React.FC = () => {
                 </Col>
               </Row>
               
-              {selectedTenant.preferences && selectedTenant.preferences.length > 0 && (
-                <Card size="small" title="偏好" style={{ marginTop: 16 }}>
-                  <Space wrap>
-                    {selectedTenant.preferences.map(preference => (
-                      <Tag key={preference}>{preference}</Tag>
-                    ))}
-                  </Space>
-                </Card>
-              )}
+              <Card size="small" title="偏好与生活方式" style={{ marginTop: 16 }}>
+                <Paragraph>
+                  <strong>偏好:</strong> 
+                  {selectedTenant.preferences.preferredFacilities && selectedTenant.preferences.preferredFacilities.length > 0
+                    ? selectedTenant.preferences.preferredFacilities.map((preference: string, index: number) => (
+                        <Tag key={index}>{preference}</Tag>
+                      ))
+                    : ' 无特殊偏好'}
+                </Paragraph>
+              </Card>
               
               {selectedTenant.description && (
                 <Card size="small" title="描述" style={{ marginTop: 16 }}>
@@ -709,9 +663,11 @@ const TenantManager: React.FC = () => {
                           {factor === 'community' && '社区'}
                         </span>
                         <Progress 
-                          percent={value} 
+                          percent={value as number}
                           size="small"
-                          strokeColor={value > 70 ? '#52c41a' : value > 30 ? '#faad14' : '#ff4d4f'}
+                          strokeColor={
+                            (value as number) > 70 ? '#52c41a' : (value as number) > 30 ? '#faad14' : '#ff4d4f'
+                          }
                         />
                       </div>
                     </Col>
@@ -751,7 +707,7 @@ const TenantManager: React.FC = () => {
               <div>
                 {getStatusTag(getTenantStatus(selectedTenant))}
                 <span style={{ marginLeft: 8 }}>
-                  满意度: {selectedTenant.satisfaction || 0}%
+                  满意度: {selectedTenant.satisfactionLevel || 0}%
                 </span>
               </div>
             </div>

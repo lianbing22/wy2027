@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import { GameState, GamePhase, PlayerProfile, PlayerResources } from '@types/game-state';
-import { Property } from '@types/property';
-import { Tenant } from '@types/tenant-system';
-import { Equipment, ExplorationMission } from '@types/exploration';
-import { Achievement } from '@types/achievement';
-import { AuctionItem } from '@types/auction';
+import { GamePhase, type GameState, type PlayerResources } from '@/types/game-state';
+import type { Property } from '@/types/property';
+import type { Tenant } from '@/types/tenant-system';
+import type { Equipment, ExplorationMission } from '@/types/exploration';
+import type { Achievement } from '@/types/achievement';
+import type { AuctionItem } from '@/types/auction';
 
 // 游戏动作类型
 type GameAction =

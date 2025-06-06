@@ -1,6 +1,6 @@
 import { Achievement, AchievementProgress, AchievementCategory, AchievementTier } from '../types/achievement';
 import { Player } from '../types/game-state';
-import { randomUUID } from 'crypto';
+import { randomUUID } from '../utils/uuid';
 
 // 成就类型
 export enum AchievementType {

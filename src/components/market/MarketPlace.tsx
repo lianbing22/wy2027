@@ -21,13 +21,12 @@ import {
   Divider,
   Empty,
   Spin,
-  Alert
+  Alert,
+  Typography
 } from 'antd';
 import {
   ShoppingCartOutlined,
   DollarOutlined,
-  TrendingUpOutlined,
-  TrendingDownOutlined,
   FireOutlined,
   StarOutlined,
   SearchOutlined,
@@ -39,12 +38,19 @@ import {
   MinusOutlined,
   HistoryOutlined
 } from '@ant-design/icons';
-import { useServices } from '../../services';
-import type { MarketItem, MarketCategory, MarketTrend, PriceHistory } from '../../types';
+import { useServices } from '@/services';
+import { 
+  MarketItemType as MarketCategory,
+  type MarketItem, 
+  type MarketAnalysis as MarketTrend, 
+  type PricePoint as PriceHistoryData, 
+  type ItemEffect 
+} from '@/types/market';
 
 const { Search } = Input;
 const { Option } = Select;
 const { TabPane } = Tabs;
+const { Text, Title, Paragraph } = Typography;
 
 interface MarketStats {
   totalItems: number;
@@ -74,34 +80,46 @@ const MarketPlace: React.FC = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [cartModalVisible, setCartModalVisible] = useState(false);
   const [priceHistoryModalVisible, setPriceHistoryModalVisible] = useState(false);
-  const [priceHistory, setPriceHistory] = useState<PriceHistory[]>([]);
+  const [priceHistory, setPriceHistory] = useState<PriceHistoryData[]>([]);
   const [searchText, setSearchText] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<MarketCategory | 'all'>('all');
-  const [sortBy, setSortBy] = useState<'price' | 'demand' | 'name'>('name');
+  const [sortBy, setSortBy] = useState<'currentPrice' | 'demand' | 'name'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   
-  const { gameEngine, marketService, isInitialized } = useServices();
+  const { initialized, services } = useServices();
+  const gameEngine = services?.gameEngine;
+  const marketService = services?.marketService;
+  const isInitialized = initialized;
+
+  // 稀有度颜色映射
+  const rarityColor: { [key: string]: string } = {
+    common: 'gray',
+    uncommon: 'green',
+    rare: 'blue',
+    epic: 'purple',
+    legendary: 'gold',
+  };
 
   // 市场分类
   const categories: { value: MarketCategory | 'all', label: string, icon: React.ReactNode }[] = [
     { value: 'all', label: '全部', icon: <ShopOutlined /> },
-    { value: 'furniture', label: '家具', icon: '🪑' },
-    { value: 'appliance', label: '电器', icon: '📺' },
-    { value: 'decoration', label: '装饰', icon: '🖼️' },
-    { value: 'tool', label: '工具', icon: '🔧' },
-    { value: 'material', label: '材料', icon: '🧱' },
-    { value: 'service', label: '服务', icon: '🛠️' }
+    { value: MarketCategory.FURNITURE, label: '家具', icon: '🪑' },
+    { value: MarketCategory.EQUIPMENT, label: '设备', icon: '📺' },
+    { value: MarketCategory.DECORATION, label: '装饰', icon: '🖼️' },
+    { value: MarketCategory.CONSUMABLE, label: '消耗品', icon: '🔧' },
+    { value: MarketCategory.UPGRADE, label: '升级材料', icon: '🧱' },
   ];
 
   // 加载数据
   useEffect(() => {
-    if (!isInitialized) return;
+    if (!isInitialized || !services || !gameEngine || !marketService) return;
     loadData();
-  }, [isInitialized]);
+  }, [isInitialized, services, gameEngine, marketService]);
 
   // 筛选和排序
   useEffect(() => {
-    let filtered = items;
+    if (!items) return;
+    let filtered = [...items];
     
     // 搜索筛选
     if (searchText) {
@@ -120,9 +138,9 @@ const MarketPlace: React.FC = () => {
     filtered.sort((a, b) => {
       let aValue, bValue;
       switch (sortBy) {
-        case 'price':
-          aValue = a.price;
-          bValue = b.price;
+        case 'currentPrice':
+          aValue = a.currentPrice;
+          bValue = b.currentPrice;
           break;
         case 'demand':
           aValue = a.demand;
@@ -146,17 +164,21 @@ const MarketPlace: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const gameState = await gameEngine().getGameState();
-      const marketItems = await marketService().getAllItems();
-      const marketStats = await marketService().getMarketStatistics();
+      if (!gameEngine || !marketService) {
+        message.error('服务未初始化');
+        setLoading(false);
+        return;
+      }
+      const gameState = await gameEngine.getGameState();
+      const marketItems = await marketService.getAllItems();
       
       setItems(marketItems);
       
       // 计算统计数据
       const totalItems = marketItems.length;
-      const totalValue = marketItems.reduce((sum, item) => sum + item.price, 0);
+      const totalValue = marketItems.reduce((sum: number, item: MarketItem) => sum + item.currentPrice, 0);
       const averagePrice = totalItems > 0 ? totalValue / totalItems : 0;
-      const trendingItems = marketItems.filter(item => item.demand > 70).length;
+      const trendingItems = marketItems.filter((item: MarketItem) => item.demand > 70).length;
       
       setStats({
         totalItems,
@@ -183,11 +205,11 @@ const MarketPlace: React.FC = () => {
   };
 
   // 获取价格趋势图标
-  const getPriceTrendIcon = (trend: number) => {
-    if (trend > 0) return <TrendingUpOutlined style={{ color: '#52c41a' }} />;
-    if (trend < 0) return <TrendingDownOutlined style={{ color: '#ff4d4f' }} />;
-    return null;
-  };
+  // const getPriceTrendIcon = (trend: number) => {
+  //   if (trend > 0) return <TrendingUpOutlined style={{ color: '#52c41a' }} />;
+  //   if (trend < 0) return <TrendingDownOutlined style={{ color: '#ff4d4f' }} />;
+  //   return null;
+  // };
 
   // 添加到购物车
   const addToCart = (item: MarketItem, quantity: number = 1) => {
@@ -213,47 +235,38 @@ const MarketPlace: React.FC = () => {
 
   // 更新购物车数量
   const updateCartQuantity = (itemId: string, quantity: number) => {
-    if (quantity <= 0) {
-      removeFromCart(itemId);
-      return;
-    }
-    
     setCart(cart.map(item => 
       item.id === itemId ? { ...item, quantity } : item
-    ));
+    ).filter(item => item.quantity > 0));
   };
 
   // 计算购物车总价
   const getCartTotal = () => {
-    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+    return cart.reduce((total, item) => total + (item.currentPrice * item.quantity), 0);
   };
 
   // 处理购买
   const handlePurchase = async () => {
-    if (cart.length === 0) {
-      message.warning('购物车为空');
-      return;
+    if (!marketService || !gameEngine) {
+        message.error("服务未初始化!");
+        return;
     }
-    
-    const total = getCartTotal();
-    if (total > stats.playerMoney) {
-      message.error('资金不足');
-      return;
-    }
-    
+    setLoading(true);
     try {
-      // 这里应该调用市场服务的购买方法
       for (const cartItem of cart) {
-        await marketService().purchaseItem(cartItem.id, cartItem.quantity);
+        await marketService.purchaseItem(cartItem.id, cartItem.quantity);
       }
-      
-      message.success('购买成功！');
+      const gameState = await gameEngine.getGameState();
+      setStats(prevStats => ({ ...prevStats, playerMoney: gameState.player.money }));
       setCart([]);
       setCartModalVisible(false);
+      message.success('购买成功!');
       loadData();
     } catch (error) {
       console.error('购买失败:', error);
       message.error('购买失败');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -265,14 +278,21 @@ const MarketPlace: React.FC = () => {
 
   // 查看价格历史
   const handleViewPriceHistory = async (item: MarketItem) => {
+    if (!marketService) {
+        message.error("市场服务未初始化!");
+        return;
+    }
+    setLoading(true);
     try {
-      const history = await marketService().getPriceHistory(item.id);
-      setPriceHistory(history);
+      const history = await marketService.getItemPriceHistory(item.id);
+      setPriceHistory(history as PriceHistoryData[]);
       setSelectedItem(item);
       setPriceHistoryModalVisible(true);
     } catch (error) {
       console.error('获取价格历史失败:', error);
       message.error('获取价格历史失败');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -361,7 +381,7 @@ const MarketPlace: React.FC = () => {
               style={{ width: '100%' }}
             >
               <Option value="name">按名称</Option>
-              <Option value="price">按价格</Option>
+              <Option value="currentPrice">按价格</Option>
               <Option value="demand">按需求</Option>
             </Select>
           </Col>
@@ -436,14 +456,14 @@ const MarketPlace: React.FC = () => {
                     title={
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span>{item.name}</span>
-                        {getPriceTrendIcon(item.priceTrend || 0)}
+                        {/* {getPriceTrendIcon(item.priceTrend || 0)} */}
                       </div>
                     }
                     description={
                       <div>
                         <div style={{ marginBottom: 8 }}>
                           <Statistic
-                            value={item.price}
+                            value={item.currentPrice}
                             precision={0}
                             valueStyle={{ fontSize: '18px', fontWeight: 'bold', color: '#1890ff' }}
                             prefix={<DollarOutlined />}
@@ -517,8 +537,8 @@ const MarketPlace: React.FC = () => {
                   </div>
                   
                   <Statistic
-                    title="价格"
-                    value={selectedItem.price}
+                    title="当前价格"
+                    value={selectedItem.currentPrice}
                     precision={0}
                     valueStyle={{ fontSize: '24px', color: '#1890ff' }}
                     prefix={<DollarOutlined />}
@@ -537,11 +557,16 @@ const MarketPlace: React.FC = () => {
                     />
                   </div>
                   
-                  {selectedItem.supplier && (
+                  <Space direction="vertical" style={{ width: '100%' }}>
                     <div>
-                      <strong>供应商:</strong> {selectedItem.supplier.name}
+                      <strong>稀有度:</strong> <Tag color={rarityColor[selectedItem.rarity]}>{selectedItem.rarity}</Tag>
                     </div>
-                  )}
+                    
+                   <Paragraph>
+                     <Text strong>供应商: </Text>
+                     <Tag color="volcano">{selectedItem.supplierId || '未知'}</Tag>
+                   </Paragraph>
+                  </Space>
                 </Space>
               </Col>
             </Row>
@@ -553,12 +578,12 @@ const MarketPlace: React.FC = () => {
               <p>{selectedItem.description}</p>
             </div>
             
-            {selectedItem.features && selectedItem.features.length > 0 && (
+            {selectedItem.effects && selectedItem.effects.length > 0 && (
               <div style={{ marginTop: 16 }}>
-                <h4>特性</h4>
+                <h4>效果/特点</h4>
                 <Space wrap>
-                  {selectedItem.features.map(feature => (
-                    <Tag key={feature}>{feature}</Tag>
+                  {selectedItem.effects.map((effect: ItemEffect, index: number) => (
+                    <Tag key={index} color="geekblue">{effect.description || `${effect.type}: ${effect.value}`} </Tag>
                   ))}
                 </Space>
               </div>
@@ -629,9 +654,9 @@ const MarketPlace: React.FC = () => {
                   ]}
                 >
                   <List.Item.Meta
-                    avatar={<Avatar src={item.image} icon={<ShopOutlined />} />}
-                    title={item.name}
-                    description={`单价: ¥${item.price} | 小计: ¥${item.price * item.quantity}`}
+                    avatar={<Avatar src={item.image || 'https://via.placeholder.com/40?text=N/A'} icon={<ShopOutlined />} />}
+                    title={<Text strong>{item.name}</Text>}
+                    description={`单价: ¥${item.currentPrice} | 小计: ¥${item.currentPrice * item.quantity}`}
                   />
                 </List.Item>
               )}
@@ -686,7 +711,7 @@ const MarketPlace: React.FC = () => {
                       </div>
                     </div>
                     <div>
-                      {record.change > 0 && (
+                      {/* {record.change > 0 && (
                         <Tag color="green" icon={<TrendingUpOutlined />}>
                           +{record.change.toFixed(1)}%
                         </Tag>
@@ -698,7 +723,7 @@ const MarketPlace: React.FC = () => {
                       )}
                       {record.change === 0 && (
                         <Tag>无变化</Tag>
-                      )}
+                      )} */}
                     </div>
                   </div>
                 </List.Item>

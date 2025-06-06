@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto';
+import { randomUUID } from '../utils/uuid';
 
 // 通知类型
 export enum NotificationType {

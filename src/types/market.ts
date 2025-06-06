@@ -134,6 +134,7 @@ export enum MarketItemType {
 export interface MarketItem {
   id: string;
   name: string;
+  image?: string;
   type: MarketItemType;
   description: string;
   category: string;
@@ -191,6 +192,21 @@ export interface MarketAnalysis {
     longTerm: number;              // 长期预测 (90天)
   };
   recommendations: string[];
+  
+  // 新增属性以匹配GameEngineService的使用
+  overallTrend?: 'rising' | 'falling' | 'stable';
+  categoryTrends?: Record<string, number>;
+  seasonalFactors?: Record<number, number>;
+}
+
+// 定义 EventEffect 类型
+export interface EventEffect {
+  magnitude: number; // 影响程度/数值
+  type: 'positive' | 'negative' | 'neutral'; // 影响类型
+  target: string; // 影响目标 (e.g., 'price', 'demand', 'availability')
+  scope?: string; // 影响范围 (e.g., 'item_type', 'category', 'all')
+  description?: string; // 影响描述
+  duration?: number; // 影响持续时间 (游戏回合数或天数)
 }
 
 // 竞争对手信息
@@ -213,6 +229,7 @@ export interface Competitor {
   strengths: string[];
   weaknesses: string[];
   threatLevel: 'low' | 'medium' | 'high' | 'critical';
+  recentActions: string[];
   
   // 历史数据
   performanceHistory: {
@@ -223,28 +240,51 @@ export interface Competitor {
   }[];
 }
 
+// 新增类型以匹配服务中的使用
+export interface Vendor {
+  id: string;
+  name: string;
+  type: string;
+  products: Product[];
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  quality: number;
+  description: string;
+  stock?: number;        // 新增属性以匹配MarketService的使用
+  popularity?: number;   // 新增属性以匹配MarketService的使用
+  vendorId?: string;     // 新增属性以匹配MarketService的使用
+}
+
+// 价格历史记录
+export interface PriceHistory {
+  id: string;
+  productId: string;
+  price: number;
+  timestamp: Date;
+  reason?: string;       // 价格变化原因
+  marketCondition?: string;
+}
+
 // 市场事件
 export interface MarketEvent {
   id: string;
-  type: 'economic' | 'policy' | 'natural' | 'social' | 'technological';
-  name: string;
+  type: 'price_change' | 'supply_shortage' | 'demand_surge' | 'new_competitor' | 'regulation_change';
+  title: string;
   description: string;
-  
-  // 影响
-  impact: {
-    priceChange: number;           // 价格变化百分比
-    demandChange: number;          // 需求变化百分比
-    availabilityChange: number;    // 可用性变化百分比
-  };
-  
-  // 时间信息
-  startDate: string;
-  endDate?: string;
-  duration: number;                // 持续时间(天)
-  
-  // 影响范围
-  affectedSectors: string[];
-  affectedRegions: string[];
+  impact: EventEffect;
+  duration: number; // 持续天数
+  probability: number; // 发生概率
+  conditions?: string[]; // 触发条件
+  eventType?: string;    // 新增属性以匹配MarketService的使用
+  timestamp?: Date;      // 新增属性以匹配MarketService的使用
+  affectedVendors?: string[]; // 新增属性以匹配MarketService的使用
+  affectedProducts?: string[]; // 新增属性以匹配MarketService的使用
+  marketImpact?: any;    // 新增属性以匹配MarketService的使用
 }
 
 // 市场统计数据
@@ -278,4 +318,13 @@ export interface MarketStatistics {
     sales: number;
     revenue: number;
   }[];
+  
+  // 新增属性以匹配GameEngineService的使用
+  totalVolume?: number;
+  priceVolatility?: number;
+  marketGrowth?: number;
+  topCategories?: string[];
+  timestamp?: Date;
+  averageProductPrice?: number;
+  totalVendors?: number;         // 新增属性以匹配MarketService的使用
 }

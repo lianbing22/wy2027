@@ -95,6 +95,7 @@ export interface EventEffect {
   property: string;
   modifier: number;
   type: 'percentage' | 'absolute';
+  value?: number;  // 新增属性以匹配GameEngineService的使用
 }
 
 // 主游戏状态接口
