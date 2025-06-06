@@ -1,0 +1,141 @@
+/* 物业卡片样式 */
+.property-card {
+  width: 300px;
+  margin: 16px;
+  transition: all 0.3s;
+}
+
+.property-card-selected {
+  box-shadow: 0 0 0 2px #1890ff !important;
+}
+
+/* 卡片标题样式 */
+.property-card-title {
+  display: flex;
+  align-items: center;
+}
+
+.property-type-icon {
+  margin-right: 8px;
+  font-size: 18px;
+}
+
+.property-name {
+  font-weight: 500;
+  font-size: 16px;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 卡片副标题样式 */
+.property-card-subtitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.property-status {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.property-status-available {
+  background-color: #52c41a;
+  color: white;
+}
+
+.property-status-occupied {
+  background-color: #1890ff;
+  color: white;
+}
+
+.property-status-maintenance {
+  background-color: #faad14;
+  color: white;
+}
+
+.property-status-renovation {
+  background-color: #722ed1;
+  color: white;
+}
+
+.property-status-damaged {
+  background-color: #f5222d;
+  color: white;
+}
+
+/* 物业位置样式 */
+.property-location {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+/* 卡片内容样式 */
+.property-card-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.property-info-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.property-info-label {
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 14px;
+}
+
+.property-info-value {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+/* 卡片操作区域样式 */
+.property-card-actions {
+  display: flex;
+  align-items: center;
+}
+
+.property-select-button {
+  width: 24px;
+  height: 24px;
+  border-radius: 12px;
+  border: 1px solid #d9d9d9;
+  background-color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.property-select-button.selected {
+  background-color: #1890ff;
+  border-color: #1890ff;
+  color: white;
+}
+
+/* 卡片底部样式 */
+.property-card-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.property-details-button {
+  background-color: transparent;
+  border: none;
+  color: #1890ff;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 0;
+}
+
+.property-details-button:hover {
+  color: #40a9ff;
+} 

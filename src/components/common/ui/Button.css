@@ -1,0 +1,158 @@
+/* 按钮基础样式 */
+.wy-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  outline: none;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 按钮尺寸 */
+.wy-button-small {
+  height: 32px;
+  font-size: 14px;
+}
+
+.wy-button-medium {
+  height: 40px;
+  font-size: 14px;
+}
+
+.wy-button-large {
+  height: 48px;
+  font-size: 16px;
+}
+
+/* 按钮变体 */
+.wy-button-primary {
+  background-color: #1890ff;
+  color: white;
+}
+
+.wy-button-primary:hover:not(:disabled) {
+  background-color: #40a9ff;
+}
+
+.wy-button-primary:active:not(:disabled) {
+  background-color: #096dd9;
+}
+
+.wy-button-secondary {
+  background-color: white;
+  border-color: #d9d9d9;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.wy-button-secondary:hover:not(:disabled) {
+  border-color: #40a9ff;
+  color: #40a9ff;
+}
+
+.wy-button-secondary:active:not(:disabled) {
+  border-color: #096dd9;
+  color: #096dd9;
+}
+
+.wy-button-success {
+  background-color: #52c41a;
+  color: white;
+}
+
+.wy-button-success:hover:not(:disabled) {
+  background-color: #73d13d;
+}
+
+.wy-button-success:active:not(:disabled) {
+  background-color: #389e0d;
+}
+
+.wy-button-danger {
+  background-color: #f5222d;
+  color: white;
+}
+
+.wy-button-danger:hover:not(:disabled) {
+  background-color: #ff4d4f;
+}
+
+.wy-button-danger:active:not(:disabled) {
+  background-color: #cf1322;
+}
+
+.wy-button-warning {
+  background-color: #faad14;
+  color: white;
+}
+
+.wy-button-warning:hover:not(:disabled) {
+  background-color: #ffc53d;
+}
+
+.wy-button-warning:active:not(:disabled) {
+  background-color: #d48806;
+}
+
+.wy-button-text {
+  background-color: transparent;
+  border-color: transparent;
+  color: rgba(0, 0, 0, 0.85);
+  padding: 0 8px;
+}
+
+.wy-button-text:hover:not(:disabled) {
+  color: #40a9ff;
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* 禁用状态 */
+.wy-button-disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* 加载状态 */
+.wy-button-loading {
+  cursor: default;
+}
+
+.wy-button-loading-icon {
+  display: inline-block;
+  margin-right: 8px;
+  animation: button-loading 1.2s infinite linear;
+}
+
+/* 铺满容器宽度 */
+.wy-button-full-width {
+  width: 100%;
+}
+
+/* 按钮内部元素间距 */
+.wy-button-icon {
+  margin-right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 加载动画 */
+@keyframes button-loading {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+} 

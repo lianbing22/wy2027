@@ -1,0 +1,63 @@
+.market-trend-chart {
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.chart-title {
+  font-size: 16px;
+  font-weight: 500;
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: rgba(0, 0, 0, 0.85);
+  text-align: center;
+}
+
+.trend-legend {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  justify-content: center;
+}
+
+.trend-legend-item {
+  display: flex;
+  align-items: center;
+  margin-right: 16px;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.trend-legend-color {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+
+.trend-legend-item.positive .trend-legend-color {
+  background-color: #52c41a;
+}
+
+.trend-legend-item.negative .trend-legend-color {
+  background-color: #f5222d;
+}
+
+.trend-legend-name {
+  margin-right: 4px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.trend-legend-value {
+  font-weight: 500;
+}
+
+.trend-legend-item.positive .trend-legend-value {
+  color: #52c41a;
+}
+
+.trend-legend-item.negative .trend-legend-value {
+  color: #f5222d;
+} 

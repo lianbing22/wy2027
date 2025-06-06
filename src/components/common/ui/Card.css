@@ -1,0 +1,103 @@
+/* 卡片基础样式 */
+.wy-card {
+  background-color: #fff;
+  border-radius: 4px;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 边框样式 */
+.wy-card-bordered {
+  border: 1px solid #f0f0f0;
+}
+
+/* 悬浮效果 */
+.wy-card-hoverable:hover {
+  box-shadow: 0 1px 2px -2px rgba(0, 0, 0, 0.16),
+              0 3px 6px 0 rgba(0, 0, 0, 0.12),
+              0 5px 12px 4px rgba(0, 0, 0, 0.09);
+}
+
+/* 卡片头部 */
+.wy-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16px 24px 0;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 0;
+}
+
+.wy-card-header-title {
+  flex: 1;
+  overflow: hidden;
+}
+
+.wy-card-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.85);
+  margin-bottom: 8px;
+}
+
+.wy-card-subtitle {
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.45);
+  margin-bottom: 16px;
+}
+
+.wy-card-actions {
+  margin-left: auto;
+}
+
+/* 卡片内容区域 */
+.wy-card-body {
+  padding: 24px;
+}
+
+/* 卡片底部 */
+.wy-card-footer {
+  padding: 10px 24px;
+  border-top: 1px solid #f0f0f0;
+  background-color: #fafafa;
+}
+
+/* 加载中状态 */
+.wy-card-loading .wy-card-body {
+  user-select: none;
+}
+
+.wy-card-loading-content {
+  width: 100%;
+}
+
+.wy-card-loading-block {
+  height: 14px;
+  margin: 8px 0;
+  background: linear-gradient(90deg, rgba(207, 216, 220, 0.2), rgba(207, 216, 220, 0.4), rgba(207, 216, 220, 0.2));
+  background-size: 600% 600%;
+  border-radius: 2px;
+  animation: card-loading 1.4s ease infinite;
+}
+
+.wy-card-loading-block:first-child {
+  width: 94%;
+}
+
+.wy-card-loading-block:nth-child(2) {
+  width: 72%;
+}
+
+.wy-card-loading-block:last-child {
+  width: 60%;
+}
+
+@keyframes card-loading {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+} 
